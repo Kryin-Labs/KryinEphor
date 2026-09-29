@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="description" content="Kryin Ephor — The OS for modern schools">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <title>Kryin Ephor — The OS for Modern Schools</title>
+
+    <style>
+        /* LIGHT / DARK THEME BASE STYLES */
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #050505;
+            --card-bg: #f8fafc;
+            --border-color: rgba(5, 5, 5, 0.14);
+            --accent-emerald: #059669;
+            --accent-teal: #0d9488;
+        }
+
+        html.dark {
+            --bg-color: #050505;
+            --text-color: #ffffff;
+            --card-bg: #0b0f19;
+            --border-color: rgba(255, 255, 255, 0.14);
+            --accent-emerald: #10b981;
+            --accent-teal: #14b8a6;
+        }
+
+        body {
+            background-color: var(--bg-color) !important;
+            color: var(--text-color) !important;
+            font-family: 'Plus Jakarta Sans', 'Inter', sans-serif !important;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* HERO HEADLINE FONT SIZE & CENTERING */
+        #top {
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            align-items: center !important;
+            text-align: center !important;
+        }
+
+        #top h1,
+        #top .mask-line,
+        #top h1 span {
+            font-size: clamp(4.2rem, 7.2vw, 5.6rem) !important;
+            line-height: 1.15 !important;
+            letter-spacing: -0.035em !important;
+            text-align: center !important;
+        }
+
+        #top h1 .mask-line {
+            display: inline-block !important;
+            white-space: nowrap !important;
+        }
+
+        /* FLOATING NAVBAR — center the outer header only */
+        header[data-testid="floating-navbar"] {
+            position: fixed !important;
+            top: 16px !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            z-index: 50 !important;
+            width: auto !important;
+            max-width: 680px !important;
+            margin: 0 auto !important;
+        }
+
+        /* The inner <nav> should NOT have left/transform — it's a flex child */
+        header[data-testid="floating-navbar"] nav {
+            left: auto !important;
+            transform: none !important;
+            position: relative !important;
+            width: 100% !important;
+            max-width: none !important;
+        }
+
+        /* RESPONSIVE — tighter on mobile */
+        @media (max-width: 768px) {
+            header[data-testid="floating-navbar"] {
+                top: 10px !important;
+                max-width: 96vw !important;
+            }
+            header[data-testid="floating-navbar"] nav {
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+                gap: 4px !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            header[data-testid="floating-navbar"] {
+                max-width: 98vw !important;
+            }
+            header[data-testid="floating-navbar"] nav {
+                padding-left: 6px !important;
+                padding-right: 6px !important;
+                gap: 2px !important;
+                font-size: 12px !important;
+            }
+        }
+
+        /* BUTTON STYLING IN LIGHT THEME */
+        html.light .btn-see-in-action {
+            background-color: #050505 !important;
+            color: #ffffff !important;
+            border-radius: 9999px !important;
+            border: none !important;
+        }
+
+        html.light .btn-start-free-trial {
+            background-color: #ffffff !important;
+            color: #050505 !important;
+            border: 1px solid rgba(5, 5, 5, 0.22) !important;
+            border-radius: 9999px !important;
+        }
+
+        /* LIGHT MODE — surface inversions (scoped, not blanket) */
+        html.light .bg-\[\#050505\],
+        html.light .bg-black {
+            background-color: #ffffff !important;
+            color: #050505 !important;
+        }
+
+        /* Main content area (NOT footer) */
+        html.light main {
+            background-color: #ffffff !important;
+            color: #050505 !important;
+        }
+
+        /* Sections inside main — light background, but NOT the footer */
+        html.light main section {
+            background-color: #ffffff !important;
+            color: #050505 !important;
+        }
+
+        /* Preserve dark footer even in light mode */
+        html.light footer,
+        html.light footer * {
+            /* Do NOT override — keep original dark footer styling */
+        }
+
+        /* General text inheritance (scoped to main) */
+        html.light main h1,
+        html.light main h2,
+        html.light main h3,
+        html.light main h4,
+        html.light main h5,
+        html.light main h6,
+        html.light main p,
+        html.light main span,
+        html.light main a,
+        html.light main div,
+        html.light main b,
+        html.light main strong {
+            color: inherit;
+        }
+
+        /* White text → dark (scoped to main, not footer/buttons) */
+        html.light main .text-white,
+        html.light main .text-white\/90,
+        html.light main .text-white\/80 {
+            color: #050505 !important;
+        }
+
+        /* Muted white text → slate (scoped to main) */
+        html.light main .text-white\/40,
+        html.light main .text-white\/50,
+        html.light main .text-white\/60,
+        html.light main .text-white\/70 {
+            color: #475569 !important;
+        }
+
+        /* Preserve white text inside dark CTA buttons */
+        html.light .btn-see-in-action .text-white,
+        html.light .btn-see-in-action span,
+        html.light [class*="bg-emerald"] .text-white,
+        html.light button[class*="bg-black"] span,
+        html.light button[class*="bg-\[\#050505\]"] span {
+            color: #ffffff !important;
+        }
+
+        /* Borders — scoped to main */
+        html.light main .border-white\/10,
+        html.light main .border-white\/20,
+        html.light main .border-white\/30 {
+            border-color: rgba(5, 5, 5, 0.14) !important;
+        }
+
+        /* Transparent backgrounds → light fill (scoped to main) */
+        html.light main .bg-white\/\[0\.02\],
+        html.light main .bg-white\/\[0\.03\],
+        html.light main .bg-white\/\[0\.05\],
+        html.light main .bg-white\/10 {
+            background-color: #f1f5f9 !important;
+        }
+
+        /* Cards in light mode — subtle elevation */
+        html.light main [class*="rounded-2xl"][class*="border"],
+        html.light main [class*="rounded-3xl"][class*="border"] {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04) !important;
+        }
+
+        /* LIGHT MODE 3D RINGS */
+        html.light .ring-3d {
+            border-color: rgba(5, 150, 105, 0.28) !important;
+        }
+
+        /* LIGHT MODE NAVBAR */
+        html.light nav {
+            background-color: rgba(255, 255, 255, 0.9) !important;
+            border-color: rgba(5, 5, 5, 0.15) !important;
+            color: #050505 !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+        }
+
+        /* ROLE MARQUEE TEXT OVERFLOW FIX */
+        #roles .marquee-item,
+        #roles card,
+        #roles [class*="min-w-"] {
+            max-width: 320px !important;
+            white-space: normal !important;
+            word-break: break-word !important;
+            overflow-wrap: break-word !important;
+        }
+
+        #roles p,
+        #roles span,
+        #roles div {
+            white-space: normal !important;
+            word-break: break-word !important;
+        }
+
+        /* HIDE SOURCE ARCHIVE & READ THE DOCS */
+        [data-testid="source-archive"],
+        .hide-source-archive {
+            display: none !important;
+        }
+
+        /* TRUSTED BY MARQUEE & SEPARATOR POLISH */
+        .marquee-track span {
+            display: inline-flex;
+            align-items: center;
+        }
+        .marquee-track .text-white\/15,
+        .marquee-track span > span {
+            color: rgba(16, 185, 129, 0.45) !important;
+            font-size: 0.9em;
+            line-height: 1;
+            margin-left: 2rem !important;
+            margin-right: 0.5rem !important;
+        }
+        html.light .marquee-track .text-white\/15,
+        html.light .marquee-track span > span {
+            color: rgba(5, 150, 105, 0.45) !important;
+        }
+
+        /* LIGHT MODE TRUSTED BY EDGE FADES */
+        html.light section div[class*="from-\[#050505\]"][class*="bg-gradient-to-r"] {
+            background-image: linear-gradient(to right, #ffffff, rgba(255, 255, 255, 0)) !important;
+        }
+        html.light section div[class*="from-\[#050505\]"][class*="bg-gradient-to-l"] {
+            background-image: linear-gradient(to left, #ffffff, rgba(255, 255, 255, 0)) !important;
+        }
+
+        /* THEME TOGGLE BUTTON STYLES WITH UI SVG ICON */
+        .theme-toggle-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border-radius: 9999px;
+            border: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.04);
+            color: var(--text-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-left: 6px;
+            padding: 0;
+        }
+
+        html.dark .theme-toggle-btn {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .theme-toggle-btn:hover {
+            transform: scale(1.08);
+            border-color: var(--accent-emerald);
+        }
+
+        .theme-toggle-btn svg {
+            width: 16px;
+            height: 16px;
+            stroke-width: 2.2;
+            stroke: currentColor;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* CUSTOM MODAL OVERLAYS */
+        .custom-modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+
+        .custom-modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .custom-modal-box {
+            width: 100%;
+            max-width: 420px;
+            border-radius: 24px;
+            padding: 28px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            transform: scale(0.95);
+            transition: transform 0.25s ease;
+            text-align: center;
+        }
+
+        .custom-modal-overlay.active .custom-modal-box {
+            transform: scale(1);
+        }
+
+        .custom-modal-btn {
+            display: inline-block;
+            width: 100%;
+            padding: 12px;
+            border-radius: 9999px;
+            font-weight: 700;
+            font-size: 14px;
+            background: linear-gradient(135deg, #059669, #0d9488);
+            color: #ffffff !important;
+            border: none;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: opacity 0.2s ease;
+        }
+
+        .custom-modal-btn:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+
+<body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+
+    <!-- BOOK A DEMO MODAL -->
+    <div id="demo-modal" class="custom-modal-overlay">
+        <div class="custom-modal-box">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px;">
+                <img src="/brand/kryin-mark-dark.png" class="brand-modal-logo" style="height: 24px; width: 24px;"
+                    alt="Logo">
+                <span style="font-weight: 800; font-size: 18px; color: #059669;">Book a Demo</span>
+            </div>
+            <p style="font-size: 14px; opacity: 0.8; margin-bottom: 20px; line-height: 1.5;">
+                Contact our implementation team directly to schedule a live walkthrough of Kryin Ephor.
+            </p>
+            <div
+                style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-radius: 16px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.03); gap: 10px;">
+                <span
+                    style="font-size: 13px; font-weight: 700; font-family: monospace; overflow: hidden; text-overflow: ellipsis;">
+                    narco.devx@gmail.com
+                </span>
+                <button id="copy-email-btn"
+                    style="padding: 6px 14px; border-radius: 12px; font-size: 12px; font-weight: 700; background: #059669; color: #fff; border: none; cursor: pointer; shrink: 0;">
+                    Copy
+                </button>
+            </div>
+            <button class="custom-modal-btn" onclick="closeDemoModal()">Close</button>
+        </div>
+    </div>
+
+    <!-- COMING SOON MODAL -->
+    <div id="coming-soon-modal" class="custom-modal-overlay">
+        <div class="custom-modal-box" style="max-width: 360px;">
+            <div style="font-size: 28px; margin-bottom: 8px;">✨</div>
+            <h3 id="cs-title" style="font-size: 18px; font-weight: 800; margin: 0 0 8px 0;">Module Coming Soon</h3>
+            <p style="font-size: 13px; opacity: 0.8; margin: 0 0 16px 0; line-height: 1.5;">
+                This feature is scheduled for our upcoming v2.0 release. Stay tuned!
+            </p>
+            <button class="custom-modal-btn" onclick="closeComingSoonModal()">Got it</button>
+        </div>
+    </div>
+
+    <!-- LANDING PAGE CUSTOMIZER INTERACTION SCRIPT -->
+    <script>
+        // THEME MANAGEMENT
+        let currentTheme = localStorage.getItem('kryin_theme') || 'light';
+        document.documentElement.className = currentTheme;
+
+        const SUN_SVG = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>`;
+        const MOON_SVG = `<svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
+
+        function toggleTheme() {
+            currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.documentElement.className = currentTheme;
+            localStorage.setItem('kryin_theme', currentTheme);
+            updateThemeElements();
+        }
+
+        function updateThemeElements() {
+            const isDark = currentTheme === 'dark';
+            const logos = document.querySelectorAll('.nav-brand-logo, .brand-modal-logo');
+            logos.forEach(img => {
+                img.src = isDark ? '/brand/kryin-mark-light.png' : '/brand/kryin-mark-dark.png';
+            });
+            const toggleBtn = document.getElementById('theme-toggle-trigger');
+            if (toggleBtn) {
+                toggleBtn.innerHTML = isDark ? SUN_SVG : MOON_SVG;
+                toggleBtn.title = isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+            }
+        }
+
+        // TRIGGER LOGIN MODAL POPUP
+        function triggerLoginModal() {
+            if (window.parent) {
+                window.parent.postMessage({ type: 'OPEN_LOGIN_MODAL' }, '*');
+            }
+        }
+
+        // MODAL HANDLERS
+        function openDemoModal() {
+            document.getElementById('demo-modal').classList.add('active');
+        }
+        function closeDemoModal() {
+            document.getElementById('demo-modal').classList.remove('active');
+        }
+        function openComingSoonModal(featureName) {
+            document.getElementById('cs-title').innerText = featureName || 'Module Coming Soon';
+            document.getElementById('coming-soon-modal').classList.add('active');
+        }
+        function closeComingSoonModal() {
+            document.getElementById('coming-soon-modal').classList.remove('active');
+        }
+
+        // COPY EMAIL FUNCTIONALITY
+        document.addEventListener('DOMContentLoaded', () => {
+            const copyBtn = document.getElementById('copy-email-btn');
+            if (copyBtn) {
+                copyBtn.addEventListener('click', () => {
+                    navigator.clipboard.writeText('narco.devx@gmail.com');
+                    copyBtn.innerText = 'Copied!';
+                    copyBtn.style.background = '#0d9488';
+                    setTimeout(() => {
+                        copyBtn.innerText = 'Copy';
+                        copyBtn.style.background = '#059669';
+                    }, 2000);
+                });
+            }
+        });
+
+        // DOM ENHANCER OBSERVER FOR REACT MOUNT
+        const observer = new MutationObserver(() => {
+            // 1. Inject Theme Toggle into Navbar with UI SVG icon if missing
+            const nav = document.querySelector('nav');
+            if (nav && !document.getElementById('theme-toggle-trigger')) {
+                const btn = document.createElement('button');
+                btn.id = 'theme-toggle-trigger';
+                btn.className = 'theme-toggle-btn';
+                btn.onclick = toggleTheme;
+                btn.innerHTML = currentTheme === 'dark' ? SUN_SVG : MOON_SVG;
+                btn.title = currentTheme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+                nav.appendChild(btn);
+            }
+
+            // 2. Replace Nav Logo with brand icon
+            const navLogoLink = document.querySelector('[data-testid="nav-logo"]');
+            if (navLogoLink) {
+                const oldCircle = navLogoLink.querySelector('.w-5.h-5.relative, div');
+                if (oldCircle && !oldCircle.classList.contains('nav-brand-logo')) {
+                    oldCircle.remove();
+                }
+                if (!navLogoLink.querySelector('.nav-brand-logo')) {
+                    const img = document.createElement('img');
+                    img.className = 'nav-brand-logo';
+                    img.src = currentTheme === 'dark' ? '/brand/kryin-mark-light.png' : '/brand/kryin-mark-dark.png';
+                    img.style.height = '22px';
+                    img.style.width = '22px';
+                    img.style.objectFit = 'contain';
+                    img.style.marginRight = '6px';
+                    navLogoLink.prepend(img);
+                }
+            }
+
+            // 3. Intercept Buttons: See it in Action, Sign In -> Trigger Login Popup Modal!
+            document.querySelectorAll('a, button').forEach(el => {
+                const txt = el.innerText ? el.innerText.trim().toLowerCase() : '';
+                if (txt.includes('book a demo') || txt.includes('book demo')) {
+                    el.onclick = (e) => { e.preventDefault(); openDemoModal(); };
+                }
+                if (txt.includes('see it in action') || txt.includes('sign in') || txt.includes('log in') || txt.includes('enter workspace')) {
+                    el.classList.add('btn-see-in-action');
+                    el.onclick = (e) => { e.preventDefault(); triggerLoginModal(); };
+                }
+                if (txt.includes('start free trial')) {
+                    el.classList.add('btn-start-free-trial');
+                    el.onclick = (e) => { e.preventDefault(); openDemoModal(); };
+                }
+                if (txt.includes('read the docs')) {
+                    el.style.display = 'none';
+                }
+            });
+
+            // 4. Intercept Footer Links
+            document.querySelectorAll('footer a, footer button').forEach(el => {
+                const text = el.innerText ? el.innerText.trim() : '';
+                if (['Attendance', 'Fees', 'Analytics', 'Parent Portal', 'Attendance Tracking', 'Fees & Ledger'].includes(text)) {
+                    el.onclick = (e) => { e.preventDefault(); window.top.location.href = '/dashboard'; };
+                } else if (text && !text.toLowerCase().includes('book a demo') && !text.includes('Kryin')) {
+                    el.onclick = (e) => { e.preventDefault(); openComingSoonModal(text); };
+                }
+            });
+
+            // 5. Enhance School Ticker & Stats
+            document.querySelectorAll('.marquee-track span').forEach(el => {
+                if (el.innerHTML && (el.innerHTML.includes('✦') || el.innerHTML.includes('\u2726'))) {
+                    el.innerHTML = el.innerHTML.replace(/✦|\u2726/g, '•');
+                }
+            });
+            document.querySelectorAll('span').forEach(el => {
+                if (el.textContent && el.textContent.trim() === '1++') {
+                    el.textContent = '50+';
+                }
+            });
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+    </script>
+
+    <!-- SUPPRESS WEBPACK DEV SERVER WEBSOCKET ERRORS IN PRODUCTION -->
+    <script>
+        // The bundle.js is a webpack dev build that tries to connect to
+        // ws://0.0.0.0:443/ws for HMR. Block the WebSocket before it fires.
+        (function() {
+            var OrigWS = window.WebSocket;
+            window.WebSocket = function(url, protocols) {
+                if (typeof url === 'string' && (url.includes('/ws') && (url.includes('0.0.0.0') || url.includes(location.hostname)))) {
+                    // Return a dummy that won't throw but does nothing
+                    return { send: function(){}, close: function(){}, addEventListener: function(){}, removeEventListener: function(){}, readyState: 3, CONNECTING: 0, OPEN: 1, CLOSING: 2, CLOSED: 3 };
+                }
+                if (protocols !== undefined) return new OrigWS(url, protocols);
+                return new OrigWS(url);
+            };
+            window.WebSocket.prototype = OrigWS.prototype;
+            window.WebSocket.CONNECTING = 0;
+            window.WebSocket.OPEN = 1;
+            window.WebSocket.CLOSING = 2;
+            window.WebSocket.CLOSED = 3;
+        })();
+    </script>
+    <script defer src="static/js/bundle.js"></script>
+</body>
+
+</html>

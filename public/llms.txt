@@ -1,0 +1,8 @@
+# Kryin School
+
+> Kryin School is a school management platform for attendance, classes, finance, announcements, and administration.
+
+## Pages
+
+- [Home](/): Overview of Kryin School, features, and testimonials for school administrators.
+- [15 Best School Management Software for 2026](/blog/best-school-management-software): Comparison guide of the top school management systems and school administration software for K-12, private, and international schools.

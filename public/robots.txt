@@ -1,0 +1,23 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /announcements
+Disallow: /focus
+Disallow: /fees
+Disallow: /tests
+Disallow: /performance
+Disallow: /marks
+Disallow: /manage-tests
+Disallow: /super-admin
+Disallow: /database
+Disallow: /users
+Disallow: /finance
+Disallow: /school-finance
+Disallow: /alerts
+Disallow: /settings
+Disallow: /global-setup
+Disallow: /attendance
+Disallow: /classes
+Disallow: /reset-password
+
+Sitemap: https://kryin-ephor.vercel.app/sitemap.xml

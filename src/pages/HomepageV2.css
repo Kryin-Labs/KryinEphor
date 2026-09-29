@@ -1,0 +1,17 @@
+@keyframes hp2-marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes hp2-fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.hp2-fade { animation: hp2-fadeUp 0.7s ease forwards; }
+.hp2-fade-d1 { animation-delay: 0.1s; opacity: 0; }
+.hp2-fade-d2 { animation-delay: 0.2s; opacity: 0; }
+.hp2-fade-d3 { animation-delay: 0.3s; opacity: 0; }
+.hp2 { transition: background-color 0.35s ease, color 0.35s ease; }
+.hp2-card { transition: background-color 0.35s, color 0.35s, border-color 0.35s, box-shadow 0.35s; }
+.hp2-backdrop { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.hp2-marquee { animation: hp2-marquee 22s linear infinite; }
+.hp2-faq-body { overflow: hidden; transition: max-height 0.35s ease, padding 0.35s ease; }

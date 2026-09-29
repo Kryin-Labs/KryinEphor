@@ -1,0 +1,10 @@
+CREATE INDEX IF NOT EXISTS idx_system_logs_created_at ON public.system_logs (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_system_logs_school_created ON public.system_logs (school_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_profiles_school_role ON public.profiles (school_id, role) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_invoices_school_status ON public.invoices (school_id, status) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_invoices_school_created ON public.invoices (school_id, created_at DESC) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_transactions_school_status_created ON public.transactions (school_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON public.notifications (user_id, is_read, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_class_enrollments_class ON public.class_enrollments (class_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_class_enrollments_student ON public.class_enrollments (student_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_attendance_class_date ON public.attendance (class_id, date) WHERE deleted_at IS NULL;

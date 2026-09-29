@@ -1,0 +1,12 @@
+# Upload only the app source. This checkout also contains local backups and private files.
+/*
+!api
+!public
+!src
+!index.html
+!package.json
+!package-lock.json
+!bun.lock
+!tsconfig*.json
+!vercel.json
+!vite.config.ts

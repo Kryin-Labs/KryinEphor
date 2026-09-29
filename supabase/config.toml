@@ -1,0 +1,38 @@
+project_id = "qgefjcuulsofevmxfqxe"
+
+# Edge functions also validate JWT in-code and enforce role checks.
+# Gateway JWT verification stays enabled so unauthenticated requests are rejected
+# before business logic runs.
+
+[functions.create_tenant_admin]
+verify_jwt = true
+
+[functions.update_admin]
+verify_jwt = true
+
+[functions.create_school_with_admin]
+verify_jwt = true
+
+[functions.update_school]
+verify_jwt = true
+
+[functions.delete_school]
+verify_jwt = true
+
+[functions.delete_user]
+verify_jwt = true
+
+[functions.admin_set_recovery_email]
+verify_jwt = true
+
+[functions.request_password_recovery]
+verify_jwt = false
+
+[functions.set_recovery_email]
+verify_jwt = true
+
+[functions.mailer_health_check]
+verify_jwt = false
+
+[functions.announcement_push]
+verify_jwt = true

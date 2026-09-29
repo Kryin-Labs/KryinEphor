@@ -1,0 +1,29 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+PRIVATE/
+*.pem
+*.jks
+*.keystore
+
+# Dependencies and generated output
+node_modules/
+dist/
+.vercel/
+supabase/.temp/
+*.tsbuildinfo
+*.apk
+*.aab
+*.zip
+npm-debug.log*
+
+# Local tooling and workspaces
+.agents/
+.claude/
+.codex/
+.impeccable/
+.kilo/
+.lovable/
+.npm-cache/
+scratch/

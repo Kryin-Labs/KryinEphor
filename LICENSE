@@ -1,0 +1,185 @@
+PROPRIETARY SOFTWARE LICENSE
+============================
+
+Copyright (c) 2026 Arth. All rights reserved.
+
+
+1. DEFINITIONS
+
+   "Software" refers to all source code, object code, documentation,
+   design files, database schemas, configuration files, assets, and any
+   other materials contained in this repository, whether in compiled or
+   uncompiled form.
+
+   "Owner" refers to Arth, the sole copyright holder of this Software.
+
+   "You" refers to any individual or entity accessing this repository.
+
+
+2. NO LICENSE GRANTED
+
+   This Software is proprietary and confidential. No license, right,
+   or permission — express or implied — is granted to any person or
+   entity to use, copy, modify, merge, publish, distribute, sublicense,
+   sell, or otherwise exploit this Software or any portion thereof.
+
+   Accessing or viewing this repository does NOT constitute a grant
+   of any license or right to the Software.
+
+
+3. RESTRICTIONS
+
+   You may NOT, under any circumstances:
+
+   a) Copy, reproduce, duplicate, or clone this Software or any part
+      of it, in whole or in part, in any form or medium.
+
+   b) Modify, adapt, translate, reverse-engineer, decompile,
+      disassemble, or create derivative works based on this Software.
+
+   c) Distribute, share, transmit, publish, sublicense, lease, rent,
+      lend, or otherwise make this Software available to any third
+      party, whether for free or for compensation.
+
+   d) Use this Software, in whole or in part, for any commercial
+      purpose, product, service, application, or project.
+
+   e) Use this Software, in whole or in part, for any personal,
+      educational, research, or non-commercial project without
+      explicit written permission from the Owner.
+
+   f) Publicly display, perform, broadcast, or demonstrate this
+      Software or any visual output, screenshot, or recording thereof.
+
+   g) Host, deploy, or run this Software on any server, cloud
+      platform, local machine, or any other computing environment
+      without explicit written permission from the Owner.
+
+   h) Remove, alter, obscure, or modify any copyright notices,
+      proprietary markings, or attribution statements contained in
+      this Software.
+
+   i) Use any part of this Software's code, architecture, design
+      patterns, database schemas, or algorithms as a reference,
+      template, or basis for building other software.
+
+   j) Train any artificial intelligence, machine learning model,
+      or automated system on this Software's code or documentation.
+
+   k) Scrape, crawl, index, or programmatically access any content
+      from this repository beyond what is publicly visible on the
+      repository's main page.
+
+
+4. REVIEW-ONLY ACCESS
+
+   This repository is provided for review purposes only. "Review" is
+   limited to reading the publicly visible source code on the hosting
+   platform (e.g., GitHub) for the sole purpose of evaluating the
+   Owner's technical capabilities.
+
+   Review access does NOT grant any right to download, fork, clone,
+   or otherwise obtain a local copy of this Software.
+
+
+5. CONFIDENTIALITY
+
+   This Software contains proprietary trade secrets, confidential
+   business logic, and sensitive architectural decisions. By accessing
+   this repository, you acknowledge that:
+
+   a) The Software contains confidential information belonging to
+      the Owner.
+
+   b) You will not disclose, share, or communicate any information
+      obtained from this Software to any third party.
+
+   c) You will not use any information obtained from this Software
+      for competitive purposes or to develop competing products.
+
+
+6. INTELLECTUAL PROPERTY
+
+   All intellectual property rights in and to this Software, including
+   but not limited to copyrights, patents, trademarks, trade secrets,
+   and any other proprietary rights, are and shall remain the exclusive
+   property of the Owner.
+
+   No transfer of intellectual property rights is made or implied by
+   making this repository accessible.
+
+
+7. SECURITY
+
+   Certain files critical to the operation of this Software have been
+   intentionally excluded from this repository for security purposes.
+   Any attempt to reconstruct, guess, or obtain these files constitutes
+   unauthorized access and is strictly prohibited.
+
+
+8. ENFORCEMENT
+
+   Any violation of this License may result in:
+
+   a) Immediate legal action, including but not limited to civil
+      lawsuits for damages, injunctive relief, and recovery of
+      legal costs.
+
+   b) Criminal prosecution under applicable intellectual property
+      and computer fraud laws.
+
+   c) Statutory damages as provided by applicable copyright law.
+
+   The Owner reserves the right to pursue all available legal remedies
+   against any person or entity that violates the terms of this License.
+
+
+9. DISCLAIMER OF WARRANTY
+
+   THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND
+   NON-INFRINGEMENT. THE OWNER MAKES NO WARRANTY THAT THE SOFTWARE
+   WILL BE ERROR-FREE, SECURE, OR AVAILABLE.
+
+
+10. LIMITATION OF LIABILITY
+
+    IN NO EVENT SHALL THE OWNER BE LIABLE FOR ANY CLAIM, DAMAGES, OR
+    OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR
+    OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE
+    OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+11. GOVERNING LAW
+
+    This License shall be governed by and construed in accordance with
+    the laws of India. Any disputes arising from this License shall be
+    subject to the exclusive jurisdiction of the courts in India.
+
+
+12. SEVERABILITY
+
+    If any provision of this License is held to be invalid or
+    unenforceable, the remaining provisions shall continue in full
+    force and effect.
+
+
+13. ENTIRE AGREEMENT
+
+    This License constitutes the entire agreement between the Owner
+    and You regarding the Software and supersedes all prior agreements,
+    understandings, and communications.
+
+
+14. CONTACT
+
+    For licensing inquiries, permissions, or any other questions
+    regarding this Software, contact the Owner directly through
+    the repository's issue tracker or profile.
+
+
+============================
+Copyright (c) 2026 Arth
+All rights reserved.
+============================
