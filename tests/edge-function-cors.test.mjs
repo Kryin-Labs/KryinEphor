@@ -8,6 +8,10 @@ test('allows Vite localhost origins for Edge Function development', () => {
   assert.equal(resolveCorsOrigin('http://127.0.0.1:5173'), 'http://127.0.0.1:5173');
 });
 
+test('allows the KryinEphor production origin', () => {
+  assert.equal(resolveCorsOrigin('https://kryin-ephor.vercel.app'), 'https://kryin-ephor.vercel.app');
+});
+
 test('keeps untrusted origins out of the Edge Function CORS allowlist', () => {
   assert.equal(resolveCorsOrigin('https://untrusted.example'), null);
 });
