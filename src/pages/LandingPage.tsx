@@ -83,7 +83,7 @@ const LandingPage: React.FC = () => {
                 <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-emerald-900/10 shadow-sm mb-8 animate-fade-up">
                         <span className="w-2 h-2 rounded-full bg-lime-400 animate-pulse"></span>
-                        <span className="text-xs font-bold text-emerald-900 tracking-wide uppercase">Super Admin Network v2.0 is live</span>
+                        <span className="text-xs font-bold text-emerald-900 tracking-wide uppercase">School announcements are now live</span>
                     </div>
 
                     <h1 className="text-5xl md:text-7xl font-extrabold text-emerald-900 tracking-tight mb-6 leading-[1.1] animate-fade-up delay-100">
