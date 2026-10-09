@@ -9,7 +9,9 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "test": "node --test tests/*.test.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "push:deploy": "git push kryin main",
+    "push:sync": "git push kryin main && git push origin main"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

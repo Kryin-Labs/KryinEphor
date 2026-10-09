@@ -362,6 +362,50 @@ This is a **proprietary project**. Contributions are not accepted at this time.
 
 If you have questions or want to discuss the architecture, open an issue.
 
+## 🚀 Vercel Deployment & GitHub Sync Workflow
+
+This project is deployed on **Vercel** via the [`Kryin-Labs/KryinEphor`](https://github.com/Kryin-Labs/KryinEphor) repository.
+
+### Remotes Setup
+- **`kryin`** → `https://github.com/Kryin-Labs/KryinEphor.git` *(Production Vercel deployment target)*
+- **`origin`** → `https://github.com/ArthOfficial/KryinEphor.git` *(Personal backup repository)*
+
+### How to Push & Trigger a Vercel Update
+To push new changes and immediately trigger a fresh Vercel deployment:
+
+```bash
+# 1. Stage and commit your changes
+git add .
+git commit -m "feat: your feature description"
+
+# 2. Push to Kryin-Labs to trigger Vercel deployment
+git push kryin main
+
+# 3. (Optional) Sync backup repository
+git push origin main
+```
+
+Or run via npm:
+```bash
+npm run push:deploy   # pushes to kryin main
+npm run push:sync     # pushes to both kryin and origin
+```
+
+### Git Identity & Author Emails (Vercel Verification)
+If you ever need to set or switch the commit author identity for Vercel Hobby verification:
+
+```bash
+# Option A: Arth Official (Primary Personal)
+git config user.name "Arth Official"
+git config user.email "purohitarthbkn@gmail.com"
+
+# Option B: Kryin Labs (Organization)
+git config user.name "Kryin Labs"
+git config user.email "official.kryin@gmail.com"
+```
+
+> **Note on `vercel.json`:** Vercel strictly enforces standard JSON formatting. Do not add comments (`//` or `/* */`) or `$comment` keys directly into `vercel.json` as it causes Vercel builds to fail.
+
 ---
 
 ## 📜 License
