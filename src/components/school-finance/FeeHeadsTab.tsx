@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Plus, Loader2, Trash2, Search } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
-import { currency, Modal } from './shared';
+import { Modal } from './shared';
+import { currency } from './format';
 
 interface FeeHead {
     id: string; name: string; amount: number; frequency: string | null;
@@ -19,16 +20,15 @@ const FeeHeadsTab: React.FC<Props> = ({ schoolId }) => {
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState({ name: '', amount: '', frequency: 'monthly', is_mandatory: true });
 
-    const load = async () => {
-        setLoading(true);
+    const load = useCallback(async () => {
         const { data, error } = await supabase.from('fee_structures')
             .select('id,name,amount,frequency,is_mandatory,class_id')
             .eq('school_id', schoolId).is('deleted_at', null).order('name');
         if (error) toast.error(error.message);
         setRows(data ?? []);
         setLoading(false);
-    };
-    useEffect(() => { load(); }, [schoolId]);
+    }, [schoolId]);
+    useEffect(() => { const timer = setTimeout(() => void load(), 0); return () => clearTimeout(timer); }, [load]);
 
     const save = async () => {
         if (!form.name || !form.amount) return toast.error('Name and amount are required');

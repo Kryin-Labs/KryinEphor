@@ -34,7 +34,8 @@ export const AnimatedDatePicker: React.FC<Props> = ({ value, onChange, min, acce
     const minDate = min ? startOfDay(min) : today;
     const selected = value ? parseISO(value) : null;
     const [open, setOpen] = useState(false);
-    const [cursor, setCursor] = useState<Date>(selected || today);
+    const [calendar, setCalendar] = useState(() => ({ value, month: selected || today }));
+    const cursor = calendar.value === value ? calendar.month : selected || today;
     const ref = useRef<HTMLDivElement>(null);
     const btnRef = useRef<HTMLButtonElement>(null);
     const popRef = useRef<HTMLDivElement>(null);
@@ -81,8 +82,6 @@ export const AnimatedDatePicker: React.FC<Props> = ({ value, onChange, min, acce
         if (open) document.addEventListener('mousedown', onClick);
         return () => document.removeEventListener('mousedown', onClick);
     }, [open]);
-
-    useEffect(() => { if (selected) setCursor(selected);   }, [value]);
 
     const monthStart = startOfMonth(cursor);
     const monthEnd = endOfMonth(cursor);
@@ -140,12 +139,12 @@ export const AnimatedDatePicker: React.FC<Props> = ({ value, onChange, min, acce
                         >
                             {/* Header */}
                         <div className="flex items-center justify-between mb-3">
-                            <motion.button type="button" whileTap={{ scale: 0.9 }} onClick={() => setCursor(subMonths(cursor, 1))}
+                            <motion.button type="button" whileTap={{ scale: 0.9 }} onClick={() => setCalendar({ value, month: subMonths(cursor, 1) })}
                                 className="w-9 h-9 rounded-xl hover:bg-stone-100 flex items-center justify-center">
                                 <ChevronLeft className="w-4 h-4" />
                             </motion.button>
                             <div className="text-sm font-extrabold text-foreground">{format(cursor, 'MMMM yyyy')}</div>
-                            <motion.button type="button" whileTap={{ scale: 0.9 }} onClick={() => setCursor(addMonths(cursor, 1))}
+                            <motion.button type="button" whileTap={{ scale: 0.9 }} onClick={() => setCalendar({ value, month: addMonths(cursor, 1) })}
                                 className="w-9 h-9 rounded-xl hover:bg-stone-100 flex items-center justify-center">
                                 <ChevronRight className="w-4 h-4" />
                             </motion.button>

@@ -99,7 +99,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles,
     // Phase 15: Secure Staff State Verification for Teacher Routes
     const isElevatedAdmin = roles.includes('superadmin') || roles.includes('admin');
     const qualifiesAsTeacher = allowedRoles ? allowedRoles.includes('teacher') && roles.includes('teacher') : false;
-    const mustVerifyStaffState = Boolean(requireStaffUnlock || (qualifiesAsTeacher && !isElevatedAdmin));
+    const mustVerifyStaffState = requireStaffUnlock ?? (qualifiesAsTeacher && !isElevatedAdmin);
 
     if (mustVerifyStaffState) {
         const hasTeacherCapability = roles.includes('teacher');

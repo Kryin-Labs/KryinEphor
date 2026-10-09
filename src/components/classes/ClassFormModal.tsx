@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { Plus } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -19,25 +19,12 @@ interface Props {
 
 const ClassFormModal: React.FC<Props> = ({ open, onClose, schoolId, editing }) => {
     const qc = useQueryClient();
-    const [form, setForm] = useState({
-        name: '', grade_level: '', section: '', room_number: '', capacity: '', teacher_id: '', academic_year_id: '',
-    });
-
-    useEffect(() => {
-        if (editing) {
-            setForm({
-                name: editing.name ?? '',
-                grade_level: editing.grade_level ?? '',
-                section: editing.section ?? '',
-                room_number: editing.room_number ?? '',
-                capacity: editing.capacity?.toString() ?? '',
-                teacher_id: editing.teacher_id ?? '',
-                academic_year_id: editing.academic_year_id ?? '',
-            });
-        } else {
-            setForm({ name: '', grade_level: '', section: '', room_number: '', capacity: '', teacher_id: '', academic_year_id: '' });
-        }
-    }, [editing, open]);
+    const [form, setForm] = useState(() => ({
+        name: editing?.name ?? '', grade_level: editing?.grade_level ?? '',
+        section: editing?.section ?? '', room_number: editing?.room_number ?? '',
+        capacity: editing?.capacity?.toString() ?? '', teacher_id: editing?.teacher_id ?? '',
+        academic_year_id: editing?.academic_year_id ?? '',
+    }));
 
     const { data: teachers = [] } = useSchoolTeachers(open ? schoolId : null);
 

@@ -46,9 +46,7 @@ test('Real PostgreSQL Integration: Secondary Admin Capability in fn_setup_tenant
         `, [teacherAdminId, plainTeacherId, targetUserId, schoolA]);
 
         await client.query(`
-            UPDATE profiles SET school_id = $1, role = 'teacher', is_active = true WHERE id = $2;
-            UPDATE profiles SET school_id = $1, role = 'teacher', is_active = true WHERE id = $3;
-            UPDATE profiles SET school_id = $1, role = 'teacher', is_active = true WHERE id = $4;
+            UPDATE profiles SET school_id = $1, role = 'teacher', is_active = true WHERE id IN ($2,$3,$4);
         `, [schoolA, teacherAdminId, plainTeacherId, targetUserId]);
 
         // 3. Assign secondary 'admin' capability to teacherAdmin in user_roles
@@ -73,6 +71,7 @@ test('Real PostgreSQL Integration: Secondary Admin Capability in fn_setup_tenant
         assert.equal(allowedRes.rows[0].result.success, true, 'Same-school setup by secondary admin must succeed');
 
         // Scenario B: Teacher with secondary Admin capability -> setup user in CROSS school -> DENIED
+        await client.query('SAVEPOINT cross_school_denial');
         await assert.rejects(
             async () => {
                 await client.query(`
@@ -92,6 +91,7 @@ test('Real PostgreSQL Integration: Secondary Admin Capability in fn_setup_tenant
             },
             'Cross-school setup by secondary admin must be denied'
         );
+        await client.query('ROLLBACK TO SAVEPOINT cross_school_denial');
 
         // Scenario C: Plain teacher without admin role -> setup user in same school -> DENIED
         await assert.rejects(

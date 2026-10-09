@@ -3,7 +3,8 @@ import { Loader2, Search, CheckCircle2, Clock, CalendarClock, Receipt, RefreshCc
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
-import { currency, Modal, Pill } from './shared';
+import { Modal, Pill } from './shared';
+import { currency } from './format';
 import { useInvoicesPage, useSchoolStudents, type InvoiceRow } from '../../hooks/queries';
 import QueryBoundary from '../ui/QueryBoundary';
 import Pagination from '../ui/Pagination';
@@ -29,7 +30,6 @@ const InvoicesTab: React.FC<Props> = ({ schoolId }) => {
         const t = setTimeout(() => { setQ(qInput.trim()); setPage(0); }, 300);
         return () => clearTimeout(t);
     }, [qInput]);
-    useEffect(() => { setPage(0); }, [statusFilter, schoolId]);
 
     const invoicesQuery = useInvoicesPage(schoolId, statusFilter, q, page, PAGE_SIZE);
     const studentsQuery = useSchoolStudents(schoolId);
@@ -90,7 +90,7 @@ const InvoicesTab: React.FC<Props> = ({ schoolId }) => {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
                         <input value={qInput} onChange={e => setQInput(e.target.value)} placeholder="Search invoice #…" className="clay-input pl-9 w-full" />
                     </div>
-                    <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="clay-input">
+                    <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(0); }} className="clay-input">
                         <option value="all">All</option><option value="pending">Pending</option>
                         <option value="partial">Partial</option><option value="overdue">Overdue</option>
                         <option value="paid">Paid</option><option value="waived">Waived</option>

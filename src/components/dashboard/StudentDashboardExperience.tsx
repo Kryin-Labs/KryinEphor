@@ -3,6 +3,7 @@ import { BarChart3, CalendarDays, ChevronLeft, ChevronRight, Megaphone, Target, 
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
+import TodayTimetable from '../timetable/TodayTimetable';
 
 type AttendanceStatus = 'present' | 'absent' | 'late';
 type FeedItem = { id: string; title: string; message: string | null; created_at: string | null };
@@ -69,6 +70,7 @@ export default function StudentDashboardExperience({ studentId, schoolId, feed, 
     return (
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-8 animate-fade-up delay-100">
             <div className="xl:col-span-3 space-y-5">
+            <TodayTimetable schoolId={schoolId} studentId={studentId} />
             <section className="clay-card p-5" aria-labelledby="school-feed-title">
                 <div className="flex items-center justify-between gap-3 mb-5">
                     <div className="flex items-center gap-3">

@@ -12,6 +12,7 @@ import GlobalLoader from './components/ui/GlobalLoader';
 import DevDiagnosticsPanel from './components/dev/DevDiagnosticsPanel';
 import SubscriptionBanner from './components/billing/SubscriptionBanner';
 import SubscriptionGate from './components/billing/SubscriptionGate';
+import NoClassAssignedModal from './components/auth/NoClassAssignedModal';
 import { Toaster as SonnerToaster } from 'sonner';
 
 const HomepageV2 = lazy(() => import('./pages/HomepageV2'));
@@ -35,6 +36,8 @@ const StudentPerformance = lazy(() => import('./pages/StudentPerformance'));
 const MarksEntry = lazy(() => import('./pages/MarksEntry'));
 const TestManagement = lazy(() => import('./pages/TestManagement'));
 const Announcements = lazy(() => import('./pages/Announcements'));
+const Timetable = lazy(() => import('./pages/Timetable'));
+const AIConnections = lazy(() => import('./pages/AIConnections'));
 
 function RouteLoading() {
   return <div className="min-h-screen bg-background" aria-busy="true" aria-label="Loading page" />;
@@ -42,7 +45,7 @@ function RouteLoading() {
 
 function AppContent() {
   const location = useLocation();
-  const { toast, hideToast, isTransitioning, transition } = useAuth();
+  const { toast, hideToast, isTransitioning, transition, role } = useAuth();
 
   if (location.pathname === '/oauth/consent') {
     return <Suspense fallback={<RouteLoading />}><OAuthConsent /></Suspense>;
@@ -52,6 +55,7 @@ function AppContent() {
     <>
       <SubscriptionBanner />
       <SubscriptionGate>
+      <NoClassAssignedModal />
       <AnimatePresence mode="sync">
       <Suspense fallback={<RouteLoading />}>
         <Routes location={location} key={location.pathname}>
@@ -65,6 +69,8 @@ function AppContent() {
             </ProtectedRoute>
           } />
           <Route path="/announcements" element={<ProtectedRoute><PageTransition><Announcements /></PageTransition></ProtectedRoute>} />
+          <Route path="/timetable" element={<ProtectedRoute allowedRoles={role === 'teacher' ? ['teacher'] : ['admin', 'student', 'parent']}><PageTransition><Timetable /></PageTransition></ProtectedRoute>} />
+          <Route path="/ai-connections" element={<ProtectedRoute allowedRoles={['superadmin', 'admin', 'teacher', 'student', 'parent']} requireStaffUnlock={false}><PageTransition><AIConnections /></PageTransition></ProtectedRoute>} />
           <Route path="/focus" element={
             <ProtectedRoute allowedRoles={['student']}>
               <FocusMode />

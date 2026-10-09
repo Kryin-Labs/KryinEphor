@@ -19,6 +19,7 @@ const ALLOWED_WHEN_LOCKED = ['/login', '/', '/reset-password', '/billing', '/pay
 
 export function useSubscriptionGate(): SubscriptionState {
     const { user, role } = useAuth();
+    const userId = user?.id;
     const [state, setState] = useState<Omit<SubscriptionState, 'refresh'>>({
         status: 'unknown',
         schoolId: null,
@@ -30,17 +31,12 @@ export function useSubscriptionGate(): SubscriptionState {
     });
 
     const load = useCallback(async () => {
-        if (!user?.id) { setState(s => ({ ...s, loading: false, status: 'unknown' })); return; }
-        // Super admin is never gated
-        if (role === 'superadmin') {
-            setState({ status: 'active', schoolId: null, schoolName: null, nextDueDate: null, outstanding: 0, planName: null, loading: false });
-            return;
-        }
+        if (!userId || role === 'superadmin') return;
         try {
             const { data: prof } = await supabase
                 .from('profiles')
                 .select('school_id')
-                .eq('id', user.id)
+                .eq('id', userId)
                 .maybeSingle();
             const schoolId = prof?.school_id ?? null;
             if (!schoolId) { setState(s => ({ ...s, loading: false, status: 'active' })); return; }
@@ -63,9 +59,13 @@ export function useSubscriptionGate(): SubscriptionState {
         } catch {
             setState(s => ({ ...s, loading: false, status: 'active' }));
         }
-    }, [user?.id, role]);
+    }, [userId, role]);
 
-    useEffect(() => { load(); }, [load]);
+    useEffect(() => {
+        if (!userId || role === 'superadmin') return;
+        const timer = setTimeout(() => void load(), 0);
+        return () => clearTimeout(timer);
+    }, [load, userId, role]);
 
     // Realtime refresh on school status changes
     useEffect(() => {
@@ -79,6 +79,8 @@ export function useSubscriptionGate(): SubscriptionState {
         return () => { supabase.removeChannel(ch); };
     }, [state.schoolId, load]);
 
+    if (role === 'superadmin') return { ...state, status: 'active', schoolId: null, loading: false, refresh: load };
+    if (!userId) return { ...state, status: 'unknown', schoolId: null, loading: false, refresh: load };
     return { ...state, refresh: load };
 }
 

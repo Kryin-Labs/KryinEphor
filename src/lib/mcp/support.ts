@@ -1,104 +1,110 @@
 import { createClient } from '@supabase/supabase-js';
 import type { ToolContext, ToolHandlerResult } from '@lovable.dev/mcp-js';
 import type { Database } from '../../integrations/supabase/types.js';
+import { service, userClient, verifyGrant, verifyMcpToken } from './auth-server.js';
+export { mcpPublicUrl, serverEnv } from './config.js';
 
 type Access = 'admin' | 'teacher' | 'combined-student';
-
-export const serverEnv = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
-
 export type McpActor = {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-    roles: string[];
-    schoolId: string;
-    schoolName: string;
-    combinedParentStudentEnabled: boolean;
+    id: string; name: string; email: string; role: string; roles: string[];
+    schoolId: string; schoolName: string; combinedParentStudentEnabled: boolean;
     client: ReturnType<typeof createClient<Database>>;
 };
-
-const projectUrl = serverEnv.VITE_SUPABASE_URL;
-const publishableKey = serverEnv.VITE_SUPABASE_PUBLISHABLE_KEY ?? serverEnv.VITE_SUPABASE_ANON_KEY;
-
-export const mcpPublicUrl = (serverEnv.MCP_PUBLIC_URL ?? 'https://kryin-space.vercel.app').replace(/\/$/, '');
-
-const textResult = (data: unknown): ToolHandlerResult => ({
+const result = (data: unknown): ToolHandlerResult => ({
     content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
     structuredContent: data && typeof data === 'object' ? data as Record<string, unknown> : undefined,
 });
-
-export const success = (data: unknown) => textResult(data);
-export const failure = (message: string): ToolHandlerResult => ({
-    content: [{ type: 'text', text: message }],
-    isError: true,
-});
-
-export const failIfError = (error: { message: string } | null) => {
-    if (error) throw new Error(error.message);
-};
-
-const allowedClientIds = () => new Set(
-    (serverEnv.MCP_ALLOWED_CLIENT_IDS ?? '').split(',').map((value) => value.trim()).filter(Boolean),
-);
+export const success = result;
+export const failure = (message: string): ToolHandlerResult => ({ content: [{ type: 'text', text: message }], isError: true });
+export const failIfError = (error: { message: string } | null) => { if (error) throw new Error(error.message); };
 
 export const getActor = async (ctx: ToolContext, access: Access): Promise<McpActor> => {
     const token = ctx.getToken();
-    const userId = ctx.getUserId();
-    const clientId = ctx.getClientId();
-    const allowed = allowedClientIds();
-
-    if (!token || !userId || !clientId) throw new Error('A verified OAuth MCP token is required.');
-    if (!allowed.size) throw new Error('MCP is not configured. An administrator must add approved client IDs.');
-    if (!allowed.has(clientId)) throw new Error('This AI client is not approved for Kryin Edu MCP.');
-    if (!projectUrl || !publishableKey) throw new Error('MCP server configuration is incomplete.');
-
-    const client = createClient<Database>(projectUrl, publishableKey, {
-        auth: { autoRefreshToken: false, persistSession: false },
-        global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-    const { data: profile, error: profileError } = await client
-        .from('profiles')
-        .select('id, full_name, email, role, school_id, is_active')
-        .eq('id', userId)
-        .is('deleted_at', null)
-        .single();
-    failIfError(profileError);
-    if (!profile?.is_active || !profile.school_id) throw new Error('Your school account is not active or has no school.');
-
-    const { data: extraRoles, error: rolesError } = await client.from('user_roles').select('role').eq('user_id', userId);
-    failIfError(rolesError);
-    const roles = [...new Set([profile.role, ...(extraRoles ?? []).map(({ role }) => role)])];
-    const schoolResponse = await fetch(`${projectUrl}/rest/v1/schools?id=eq.${encodeURIComponent(profile.school_id)}&deleted_at=is.null&select=id,name,combined_parent_student_account`, {
-        headers: { apikey: publishableKey, Authorization: `Bearer ${token}` },
-    });
-    if (!schoolResponse.ok) throw new Error('Your school could not be verified.');
-    const [school] = await schoolResponse.json() as Array<{ id: string; name: string; combined_parent_student_account: boolean }>;
-    if (!school) throw new Error('Your school is unavailable.');
-
-    if (access === 'admin' && !roles.includes('admin')) throw new Error('This tool is available only to school administrators.');
-    if (access === 'teacher' && profile.role !== 'teacher') throw new Error('This tool is available only to teachers.');
-    if (access === 'combined-student' && (!roles.includes('student') || !roles.includes('parent') || school.combined_parent_student_account === false)) {
-        throw new Error('MCP is available only for a combined student/parent account. Ask your school for a new combined account.');
+    if (!token) throw new Error('A verified MCP token is required.');
+    const claims = verifyMcpToken(token);
+    if (ctx.getUserId() !== claims.sub || ctx.getClientId() !== claims.client_id) throw new Error('MCP identity mismatch.');
+    const { grant, profile, db } = await verifyGrant(claims);
+    const { data: extraRoles, error: roleError } = await db.from('user_roles').select('role').eq('user_id', profile.id);
+    failIfError(roleError);
+    const roles = [...new Set([profile.role, ...(extraRoles ?? []).map(item => item.role)])];
+    if (!profile.school_id) throw new Error('A school account is required for this tool.');
+    const { data: school, error: schoolError } = await db.from('schools')
+        .select('id,name,combined_parent_student_account,ai_connections_enabled,deleted_at')
+        .eq('id', profile.school_id).maybeSingle();
+    failIfError(schoolError);
+    if (!school?.ai_connections_enabled || school.deleted_at) throw new Error('School AI connections are disabled.');
+    if (access === 'admin' && !roles.includes('admin')) throw new Error('School administrator access is required.');
+    if (access === 'teacher') {
+        const { data: staff } = await db.from('employees').select('id').eq('profile_id', profile.id)
+            .eq('school_id', school.id).eq('status', 'active').is('deleted_at', null).maybeSingle();
+        if (!roles.includes('teacher') || !staff) throw new Error('Active teacher access is required.');
+        if (!grant.teacher_session_id || !grant.teacher_read_until
+            || new Date(grant.teacher_read_until).getTime() <= Date.now()) {
+            throw new Error('Enable teacher AI access from an unlocked KryinEphor session.');
+        }
+        const { data: unlock } = await db.from('staff_unlock_sessions').select('id')
+            .eq('user_id', profile.id).eq('school_id', school.id)
+            .eq('auth_session_id', grant.teacher_session_id).eq('is_revoked', false)
+            .gt('expires_at', new Date().toISOString()).maybeSingle();
+        if (!unlock) throw new Error('The staff unlock was revoked or expired.');
     }
-
+    if (access === 'combined-student' &&
+        (!roles.includes('student') || !roles.includes('parent') || !school.combined_parent_student_account)) {
+        throw new Error('This tool requires a combined student and parent account.');
+    }
+    const { data: details } = await db.from('profiles').select('full_name,email').eq('id', profile.id).single();
     return {
-        id: profile.id,
-        name: profile.full_name ?? 'Unnamed user',
-        email: profile.email,
-        role: profile.role,
-        roles,
-        schoolId: profile.school_id,
-        schoolName: school.name,
-        combinedParentStudentEnabled: school.combined_parent_student_account !== false,
-        client,
+        id: profile.id, name: details?.full_name ?? 'Unnamed user', email: details?.email ?? '',
+        role: profile.role, roles, schoolId: school.id, schoolName: school.name,
+        combinedParentStudentEnabled: !!school.combined_parent_student_account,
+        client: userClient(profile.id, access === 'teacher' ? grant.teacher_session_id : null) as ReturnType<typeof createClient<Database>>,
     };
 };
 
 export const tool = async (run: () => Promise<ToolHandlerResult>): Promise<ToolHandlerResult> => {
-    try {
-        return await run();
-    } catch (error) {
-        return failure(error instanceof Error ? error.message : 'The request could not be completed.');
+    try { return await run(); }
+    catch (error) { return failure(error instanceof Error ? error.message : 'The request could not be completed.'); }
+};
+
+export const getSuperadmin = async (ctx: ToolContext, schoolId?: string) => {
+    const token = ctx.getToken();
+    if (!token) throw new Error('A verified MCP token is required.');
+    const claims = verifyMcpToken(token);
+    if (ctx.getUserId() !== claims.sub || ctx.getClientId() !== claims.client_id) throw new Error('MCP identity mismatch.');
+    const { grant, profile, db } = await verifyGrant(claims);
+    if (grant.school_id) throw new Error('A platform AI connection is required.');
+    const { data: role, error: roleError } = await db.from('user_roles').select('role')
+        .eq('user_id', profile.id).eq('role', 'superadmin').maybeSingle();
+    failIfError(roleError);
+    if (profile.role !== 'superadmin' && !role) throw new Error('Superadmin access is required.');
+    if (schoolId) {
+        const { data: school, error: schoolError } = await db.from('schools')
+            .select('id,name,ai_connections_enabled,deleted_at').eq('id', schoolId).maybeSingle();
+        failIfError(schoolError);
+        if (!school?.ai_connections_enabled || school.deleted_at) throw new Error('AI is disabled for this school.');
     }
+    return { id: profile.id, grantId: grant.id, grantVersion: grant.token_version, clientId: claims.client_id,
+        client: userClient(profile.id) as ReturnType<typeof createClient<Database>>, db };
+};
+
+export const resolveStudent = async (actor: McpActor, requested?: string) => {
+    const id = requested ?? actor.id;
+    if (id !== actor.id) {
+        const { data: link, error: linkError } = await service().from('parent_student').select('id')
+            .eq('parent_id', actor.id).eq('student_id', id).eq('school_id', actor.schoolId)
+            .eq('status', 'active').maybeSingle();
+        failIfError(linkError);
+        if (!link) throw new Error('This child is not linked to your account.');
+    }
+    const { data: student, error } = await service().from('profiles')
+        .select('id,full_name,role,is_active,deleted_at').eq('id', id).eq('school_id', actor.schoolId).maybeSingle();
+    failIfError(error);
+    if (!student?.is_active || student.deleted_at) throw new Error('Student is unavailable.');
+    if (student.role !== 'student') {
+        const { data: extra, error: roleError } = await service().from('user_roles')
+            .select('role').eq('user_id', id).eq('role', 'student').maybeSingle();
+        failIfError(roleError);
+        if (!extra) throw new Error('Selected account is not a student.');
+    }
+    return { id, name: student.full_name ?? 'Student' };
 };

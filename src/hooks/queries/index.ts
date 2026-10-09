@@ -265,6 +265,9 @@ export async function fetchSchoolTeachers(schoolId: string): Promise<SchoolTeach
     ]);
 
     const teacherMap = new Map<string, SchoolTeacherOption>();
+    if (staffRes.error) throw staffRes.error;
+    if (primaryTeachersRes.error) throw primaryTeachersRes.error;
+    if (additionalRolesRes.error) throw additionalRolesRes.error;
     const teacherUserRoleSet = new Set((additionalRolesRes.data ?? []).map(r => r.user_id));
     const staffByProfileId = new Map<string, { staff_person_name: string | null; designation: string | null }>();
 
@@ -288,10 +291,7 @@ export async function fetchSchoolTeachers(schoolId: string): Promise<SchoolTeach
         (staffProfiles ?? []).forEach(p => {
             if (p.is_active === false) return;
             const staff = staffByProfileId.get(p.id);
-            const isTeacher =
-                p.role === 'teacher' ||
-                teacherUserRoleSet.has(p.id) ||
-                (staff?.designation?.toLowerCase().includes('teacher') ?? true);
+            const isTeacher = p.role === 'teacher' || teacherUserRoleSet.has(p.id);
 
             if (isTeacher) {
                 const canonicalName = staff?.staff_person_name?.trim() || p.full_name?.trim() || p.email?.split('@')[0] || 'Teacher';
@@ -312,7 +312,7 @@ export async function fetchSchoolTeachers(schoolId: string): Promise<SchoolTeach
 
     // 2. Add primary teacher profiles (fallback / existing accounts)
     (primaryTeachersRes.data ?? []).forEach(p => {
-        if (teacherMap.has(p.id) || p.is_active === false) return;
+        if (teacherMap.has(p.id) || p.is_active === false || !staffByProfileId.has(p.id)) return;
         const staff = staffByProfileId.get(p.id);
         const canonicalName = staff?.staff_person_name?.trim() || p.full_name?.trim() || p.email?.split('@')[0] || 'Teacher';
         teacherMap.set(p.id, {
@@ -336,11 +336,10 @@ export async function fetchSchoolTeachers(schoolId: string): Promise<SchoolTeach
             .select('id, full_name, email, role, avatar_url, is_active')
             .eq('school_id', schoolId)
             .in('id', extraUserIds)
-            .neq('role', 'student')
             .is('deleted_at', null);
 
         (extraProfiles ?? []).forEach(p => {
-            if (p.is_active === false) return;
+            if (p.is_active === false || !staffByProfileId.has(p.id)) return;
             const staff = staffByProfileId.get(p.id);
             const canonicalName = staff?.staff_person_name?.trim() || p.full_name?.trim() || p.email?.split('@')[0] || 'Teacher';
             teacherMap.set(p.id, {

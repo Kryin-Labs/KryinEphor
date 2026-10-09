@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Search,
@@ -402,12 +402,6 @@ const AddChildModal: React.FC<{
 }) => {
     const [mode, setMode] = useState<'link' | 'create'>('link');
 
-    useEffect(() => {
-        if (isOpen) {
-            setMode('link');
-        }
-    }, [isOpen]);
-
     if (!isOpen) return null;
 
     return (
@@ -692,12 +686,7 @@ const DuplicateDetectionModal: React.FC<{
     busy,
 }) => {
     const [selectedCandidate, setSelectedCandidate] = useState<DuplicateCandidate | null>(null);
-
-    useEffect(() => {
-        if (candidates.length > 0) {
-            setSelectedCandidate(candidates[0]);
-        }
-    }, [candidates]);
+    const selected = candidates.find(candidate => candidate.id === selectedCandidate?.id) ?? candidates[0] ?? null;
 
     if (!isOpen || candidates.length === 0) return null;
 
@@ -751,7 +740,7 @@ const DuplicateDetectionModal: React.FC<{
                 {/* Candidate list */}
                 <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                     {candidates.map(cand => {
-                        const isSelected = selectedCandidate?.id === cand.id;
+                        const isSelected = selected?.id === cand.id;
                         return (
                             <div
                                 key={cand.id}
@@ -836,8 +825,8 @@ const DuplicateDetectionModal: React.FC<{
                         </button>
                         <button
                             type="button"
-                            disabled={!selectedCandidate || busy}
-                            onClick={() => selectedCandidate && onLinkExisting(selectedCandidate)}
+                            disabled={!selected || busy}
+                            onClick={() => selected && onLinkExisting(selected)}
                             className="px-4 py-2 text-xs font-bold rounded-xl bg-amber-600 text-white hover:bg-amber-700 transition-colors shadow-2xs disabled:opacity-50 flex items-center gap-1.5"
                         >
                             {busy ? 'Processing…' : 'Link This Existing Identity'}
@@ -1430,7 +1419,7 @@ const UserDrawer: React.FC<{
 
     const hasTeacherAccess = editRole === 'teacher' || additionalRoles.includes('teacher') || employeeStatus === 'active';
 
-    const fetchStaffPinStatus = async (schoolId: string, userId: string) => {
+    const fetchStaffPinStatus = useCallback(async (schoolId: string, userId: string) => {
         try {
             const { data, error } = await supabase.rpc('fn_check_staff_pin_status', {
                 _school_id: schoolId,
@@ -1440,7 +1429,7 @@ const UserDrawer: React.FC<{
                 setStaffPinInfo(data as StaffPinInfo);
             }
         } catch { /* ignore */ }
-    };
+    }, []);
 
     const handleIssueStaffPin = async () => {
         if (!user || !user.school_id) return;
@@ -1483,7 +1472,7 @@ const UserDrawer: React.FC<{
     const editSelectedSchool = schools.find(s => s.id === editSchool);
     const editLockedDomain = editSelectedSchool?.email_domain || '';
 
-    const fetchFamilyLinks = async (targetId: string) => {
+    const fetchFamilyLinks = useCallback(async (targetId: string) => {
         setFamilyLoading(true);
         try {
             const { data, error } = await supabase.rpc('fn_get_profile_family_links', { _target_profile_id: targetId });
@@ -1497,7 +1486,7 @@ const UserDrawer: React.FC<{
         } finally {
             setFamilyLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         if (user) {
@@ -1558,7 +1547,7 @@ const UserDrawer: React.FC<{
             setShowResetPinInput(false);
             setTempPinValue('');
         }
-    }, [user]);
+    }, [user, fetchFamilyLinks, fetchStaffPinStatus]);
 
     // Live search for students in current school
     useEffect(() => {
@@ -1603,7 +1592,8 @@ const UserDrawer: React.FC<{
             });
             if (error) throw error;
 
-            const res = (data as any) || {};
+            const res = (data as { remaining_children_count?: number; new_primary_role?: string;
+                has_active_persona?: boolean } | null) || {};
             const removedStudentName = unlinkingStudent.full_name;
             setUnlinkingStudent(null);
             fetchFamilyLinks(user.id);
@@ -2529,11 +2519,16 @@ const UserDrawer: React.FC<{
                             {/* ══════════════════════════════════════════════════ */}
                             <div className="p-4.5 rounded-2xl bg-white border border-gray-200/90 shadow-2xs space-y-3.5">
                                 <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-                                    <div className="flex items-center gap-2">
-                                        <UsersIcon className="w-4 h-4 text-purple-600" />
-                                        <span className="text-xs font-bold uppercase tracking-wider text-foreground">Family Access</span>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <UsersIcon className="w-4 h-4 text-purple-600" />
+                                            <span className="text-xs font-bold uppercase tracking-wider text-foreground">Family Access</span>
+                                        </div>
+                                        <p className="text-[11px] text-muted mt-0.5">
+                                            Manages parent/guardian relationships and linked student profiles. Grants access to view child attendance, fees, and academics.
+                                        </p>
                                     </div>
-                                    <div className="flex items-center gap-1.5">
+                                    <div className="flex items-center gap-1.5 shrink-0">
                                         {(() => {
                                             const hasFamilyCapability = user.role === 'parent' || additionalRoles.includes('parent') || linkedStudents.length > 0;
                                             const isAccountActive = isActive && (user.is_active ?? true);
@@ -2780,11 +2775,16 @@ const UserDrawer: React.FC<{
                             {/* ══════════════════════════════════════════════════ */}
                             <div className="p-4.5 rounded-2xl bg-white border border-gray-200/90 shadow-2xs space-y-3.5">
                                 <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-                                    <div className="flex items-center gap-2">
-                                        <GraduationCap className="w-4 h-4 text-sky-700" />
-                                        <span className="text-xs font-bold uppercase tracking-wider text-foreground">Staff Access</span>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <GraduationCap className="w-4 h-4 text-sky-700" />
+                                            <span className="text-xs font-bold uppercase tracking-wider text-foreground">Staff Access</span>
+                                        </div>
+                                        <p className="text-[11px] text-muted mt-0.5">
+                                            Manages school employment and educator privileges (marking attendance, grading exams, managing class timetables).
+                                        </p>
                                     </div>
-                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
                                         hasTeacherAccess
                                             ? 'bg-sky-100 text-sky-800 border border-sky-200'
                                             : employeeStatus === 'inactive'
@@ -3097,6 +3097,7 @@ const UserDrawer: React.FC<{
                     />
 
                     <AddChildModal
+                        key={linkStudentModalOpen ? 'open' : 'closed'}
                         isOpen={linkStudentModalOpen}
                         onClose={() => setLinkStudentModalOpen(false)}
                         relationship={newLinkRelationship}
@@ -3124,6 +3125,7 @@ const UserDrawer: React.FC<{
 
                     {/* Phase 14: Child Duplicate Detection Modal */}
                     <DuplicateDetectionModal
+                        key={childDuplicateModalOpen ? 'open' : 'closed'}
                         isOpen={childDuplicateModalOpen}
                         onClose={() => {
                             setChildDuplicateModalOpen(false);
@@ -3140,6 +3142,7 @@ const UserDrawer: React.FC<{
 
                     {/* Phase 14: Teacher Duplicate Detection Modal */}
                     <DuplicateDetectionModal
+                        key={teacherDupModalOpen ? 'open' : 'closed'}
                         isOpen={teacherDupModalOpen}
                         onClose={() => {
                             setTeacherDupModalOpen(false);
@@ -3226,8 +3229,7 @@ const RecoveryEmailSection: React.FC<{ userId: string; userEmail: string }> = ({
     const [expiresAt, setExpiresAt] = useState(0);
     const [tick, setTick] = useState(Date.now());
 
-    const load = async () => {
-        setLoading(true);
+    const load = useCallback(async () => {
         try {
             const { data, error } = await supabase
                 .from('profiles')
@@ -3244,9 +3246,9 @@ const RecoveryEmailSection: React.FC<{ userId: string; userEmail: string }> = ({
         } finally {
             setLoading(false);
         }
-    };
+    }, [userId]);
 
-    useEffect(() => { if (userId) load();   }, [userId]);
+    useEffect(() => { if (userId) void load(); }, [userId, load]);
 
     // OTP countdown
     useEffect(() => {
@@ -3817,6 +3819,7 @@ const AddUserModal: React.FC<{
         guardian_id: string;
         email: string;
         full_name: string;
+        phone?: string | null;
         primary_role: string;
         roles: string[];
         is_active: boolean;
@@ -3936,12 +3939,19 @@ const AddUserModal: React.FC<{
         const targetSchool = schoolId || myschoolId;
         if (!targetSchool) return;
 
+        const query = guardianSearchQuery.trim();
+        if (!query) {
+            setGuardianSearchResults([]);
+            setIsSearchingGuardian(false);
+            return;
+        }
+
         const timer = setTimeout(async () => {
             setIsSearchingGuardian(true);
             try {
                 const { data, error: searchErr } = await supabase.rpc('fn_search_guardians_for_student', {
                     _school_id: targetSchool,
-                    _query: guardianSearchQuery.trim()
+                    _query: query
                 });
                 if (!searchErr && Array.isArray(data)) {
                     setGuardianSearchResults(data as GuardianCandidate[]);
@@ -4582,17 +4592,17 @@ const AddUserModal: React.FC<{
                                                                 type="text"
                                                                 value={guardianSearchQuery}
                                                                 onChange={e => setGuardianSearchQuery(e.target.value)}
-                                                                placeholder="Search by name, email..."
+                                                                placeholder="Search by name, email, or phone..."
                                                                 className="clay-input w-full text-sm bg-white"
                                                             />
                                                         </div>
 
                                                         {/* Candidate list */}
-                                                        <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                                                            {isSearchingGuardian && <p className="text-xs text-muted text-center py-2">Searching accounts…</p>}
+                                                        <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                                                            {isSearchingGuardian && <p className="text-xs text-muted text-center py-2">Searching accounts in this school…</p>}
                                                             {!isSearchingGuardian && guardianSearchResults.length === 0 && (
                                                                 <p className="text-xs text-stone-400 text-center py-2">
-                                                                    {guardianSearchQuery ? 'No matching accounts found' : 'Type a name or email to search'}
+                                                                    {guardianSearchQuery.trim() ? 'No matching parent/guardian accounts found in this school' : 'Type a name, email, or phone number to search'}
                                                                 </p>
                                                             )}
                                                             {guardianSearchResults.map(g => {
@@ -4605,12 +4615,17 @@ const AddUserModal: React.FC<{
                                                                             isSelected ? 'bg-teal-100/90 border-teal-400 ring-2 ring-teal-400/30' : 'bg-white border-stone-200 hover:bg-stone-50'
                                                                         }`}
                                                                     >
-                                                                        <div className="flex items-center justify-between">
+                                                                        <div className="flex items-center justify-between gap-2">
                                                                             <span className="font-bold text-xs text-foreground truncate">
                                                                                 {g.staff_person_name || g.full_name}
                                                                             </span>
-                                                                            <span className="text-[10px] font-mono text-muted truncate">{g.email}</span>
+                                                                            <span className="text-[10px] font-mono text-muted truncate shrink-0">{g.email}</span>
                                                                         </div>
+                                                                        {g.phone && (
+                                                                            <p className="text-[10px] text-stone-500 font-medium mt-0.5">
+                                                                                📞 {g.phone}
+                                                                            </p>
+                                                                        )}
                                                                         <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                                                                             {g.has_staff_role && (
                                                                                 <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
@@ -4622,6 +4637,11 @@ const AddUserModal: React.FC<{
                                                                                     {r}
                                                                                 </span>
                                                                             ))}
+                                                                            {g.linked_children_count > 0 && (
+                                                                                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700">
+                                                                                    {g.linked_children_count} child{g.linked_children_count === 1 ? '' : 'ren'}
+                                                                                </span>
+                                                                            )}
                                                                         </div>
                                                                     </div>
                                                                 );
@@ -4632,10 +4652,11 @@ const AddUserModal: React.FC<{
                                                         {selectedGuardian && (
                                                             <div className="p-3 rounded-xl bg-white border border-teal-300 space-y-2">
                                                                 <p className="text-xs font-semibold text-teal-950">
-                                                                    Existing account found: <strong className="text-teal-900">{selectedGuardian.staff_person_name || selectedGuardian.full_name}</strong>
+                                                                    Selected guardian: <strong className="text-teal-900">{selectedGuardian.staff_person_name || selectedGuardian.full_name}</strong>
                                                                 </p>
                                                                 <p className="text-[11px] text-stone-600">
                                                                     Current access: <span className="font-bold text-stone-700">{selectedGuardian.has_staff_role ? 'Teacher / Staff' : selectedGuardian.primary_role}</span> · {selectedGuardian.email}
+                                                                    {selectedGuardian.phone ? ` · 📞 ${selectedGuardian.phone}` : ''}
                                                                 </p>
                                                                 <div className="grid grid-cols-2 gap-2 pt-1">
                                                                     <div>
@@ -4840,6 +4861,7 @@ const AddUserModal: React.FC<{
 
                         {/* Phase 14: Duplicate detection confirmation modal */}
                         <DuplicateDetectionModal
+                            key={showUserDupModal ? 'open' : 'closed'}
                             isOpen={showUserDupModal}
                             onClose={() => {
                                 setShowUserDupModal(false);

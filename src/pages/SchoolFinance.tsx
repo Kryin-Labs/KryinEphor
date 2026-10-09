@@ -7,7 +7,8 @@ import Sidebar from '../components/dashboard/Sidebar';
 import Header from '../components/dashboard/Header';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { currency, StatCard } from '../components/school-finance/shared';
+import { StatCard } from '../components/school-finance/shared';
+import { currency } from '../components/school-finance/format';
 import FeeHeadsTab from '../components/school-finance/FeeHeadsTab';
 import FeePlansTab from '../components/school-finance/FeePlansTab';
 import AssignmentsTab from '../components/school-finance/AssignmentsTab';
@@ -166,8 +167,8 @@ const SchoolFinance: React.FC = () => {
                             {tab === 'heads' && <FeeHeadsTab schoolId={schoolId} />}
                             {tab === 'plans' && <FeePlansTab schoolId={schoolId} autoOpen={openNewPlan} />}
                             {tab === 'assign' && <AssignmentsTab schoolId={schoolId} />}
-                            {tab === 'invoices' && <InvoicesTab schoolId={schoolId} />}
-                            {tab === 'receipts' && <ReceiptsTab schoolId={schoolId} />}
+                            {tab === 'invoices' && <InvoicesTab key={schoolId} schoolId={schoolId} />}
+                            {tab === 'receipts' && <ReceiptsTab key={schoolId} schoolId={schoolId} />}
                             {tab === 'charges' && <AdditionalChargesTab schoolId={schoolId} />}
                             {tab === 'salary' && (
                                 <div className="clay-card overflow-hidden">

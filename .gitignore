@@ -19,6 +19,10 @@
 
 # production
 /dist/
+*.apk
+*.aab
+*.jks
+*.keystore
 
 # misc
 .DS_Store
@@ -38,6 +42,10 @@ yarn-error.log*
 
 # vercel
 .vercel
+/.kilo/
+/.codex/
+/PRIVATE/
+/supabase/.temp/
 
 # typescript
 *.tsbuildinfo
@@ -73,3 +81,9 @@ report-final.md
 task.md
 /TheNewBackupV022/
 scratch/
+geminilog.md
+brag-output/
+brag-output-2026-10-02-dark/
+build/
+NEWAUDIT.md
+

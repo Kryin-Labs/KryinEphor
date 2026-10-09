@@ -9,14 +9,14 @@ export default function HomepageV2() {
   const { user, role } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const authorizationId = new URLSearchParams(location.search).get('authorization_id');
+  const requestId = new URLSearchParams(location.search).get('request_id');
 
   useEffect(() => {
     document.title = 'Kryin Ephor — The OS for Modern Schools';
-    if (user && role && authorizationId) {
-      navigate(`/oauth/consent?authorization_id=${encodeURIComponent(authorizationId)}`, { replace: true });
+    if (user && role && requestId) {
+      navigate(`/oauth/consent?request_id=${encodeURIComponent(requestId)}`, { replace: true });
     }
-  }, [authorizationId, navigate, role, user]);
+  }, [requestId, navigate, role, user]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {

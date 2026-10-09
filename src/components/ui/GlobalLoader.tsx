@@ -35,8 +35,7 @@ const GlobalLoader: React.FC<GlobalLoaderProps> = ({
     const [idx, setIdx] = useState(0);
 
     useEffect(() => {
-        if (!show) { setIdx(0); return; }
-        if (rotation.length <= 1) return;
+        if (!show || rotation.length <= 1) return;
         const t = setInterval(() => setIdx(i => (i + 1) % rotation.length), 1400);
         return () => clearInterval(t);
     }, [show, rotation.length]);

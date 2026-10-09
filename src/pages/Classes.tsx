@@ -74,8 +74,15 @@ const Classes: React.FC = () => {
                 .is('deleted_at', null)
                 .order('grade_level', { ascending: true })
                 .order('section', { ascending: true });
-            // Phase 15: Authoritative role check - non-admins are strictly scoped to their assigned classes
-            if (!isElevatedAdmin || role === 'teacher') query = query.eq('teacher_id', user!.id);
+            if (role === 'teacher' && !isElevatedAdmin) {
+                const { data: assignments, error: assignmentsError } = await supabase.from('subject_teachers')
+                    .select('class_id').eq('school_id', schoolId!).eq('teacher_id', user!.id);
+                if (assignmentsError) throw assignmentsError;
+                const subjectClassIds = [...new Set((assignments ?? []).map(item => item.class_id))];
+                query = subjectClassIds.length
+                    ? query.or(`teacher_id.eq.${user!.id},id.in.(${subjectClassIds.join(',')})`)
+                    : query.eq('teacher_id', user!.id);
+            }
             const { data, error } = await query;
             if (error) throw error;
             return (data ?? []) as unknown as ClassRow[];
@@ -168,7 +175,7 @@ const Classes: React.FC = () => {
                 </main>
             </div>
 
-            <ClassFormModal open={formOpen} onClose={() => { setFormOpen(false); if (editing) setSelected(editing); }} schoolId={schoolId} editing={editing} />
+            {formOpen && <ClassFormModal open={formOpen} onClose={() => { setFormOpen(false); if (editing) setSelected(editing); }} schoolId={schoolId} editing={editing} />}
 
             {subjectOpen && (
                 <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="new-subject-title">
@@ -195,6 +202,7 @@ const Classes: React.FC = () => {
                     schoolId={schoolId}
                     teacherName={selected.teacher?.full_name}
                     canEdit={canEdit}
+                    canMarkAttendance={isElevatedAdmin || (roles.includes('teacher') && selected.teacher_id === user?.id)}
                     onEdit={() => { setEditing(selected); setSelected(null); setFormOpen(true); }}
                 />
             )}

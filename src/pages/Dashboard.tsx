@@ -3,10 +3,11 @@ import Sidebar from '../components/dashboard/Sidebar';
 import Header from '../components/dashboard/Header';
 import StudentDashboardExperience from '../components/dashboard/StudentDashboardExperience';
 import AnnouncementPreview from '../components/announcements/AnnouncementPreview';
+import TodayTimetable from '../components/timetable/TodayTimetable';
 import { ChildSelector } from '../components/dashboard/ChildSelector';
 import {
     Users, Presentation, Coins, GraduationCap, ArrowUp, UserPlus, Receipt,
-    AlertTriangle, MessageSquare, Trophy, Calendar, Sparkles, Loader2, ClipboardCheck, BookOpen, ArrowLeftRight,
+    AlertTriangle, MessageSquare, Trophy, Calendar, Sparkles, Loader2, ClipboardCheck, BookOpen, ArrowLeftRight, School,
     type LucideIcon
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -96,29 +97,22 @@ const ComingSoon: React.FC<{ title: string; description: string; icon: LucideIco
 );
 
 const AttendanceSnapshot: React.FC<{ schoolId: string | null }> = ({ schoolId }) => {
-    const today = new Date().toISOString().slice(0, 10);
-    const { data, isLoading } = useQuery({
-        queryKey: ['dashboard', 'attendance-snapshot', schoolId, today],
+    const { user } = useAuth();
+    const { data, isLoading, error } = useQuery({
+        queryKey: ['dashboard', 'attendance-snapshot', schoolId, user?.id],
         enabled: !!schoolId,
         queryFn: async () => {
-            const { data, error } = await supabase
-                .from('attendance')
-                .select('status')
-                .eq('school_id', schoolId!)
-                .eq('date', today);
+            const { data, error } = await supabase.rpc('fn_attendance_summary', { p_date: null });
             if (error) throw error;
-            const rows = (data ?? []) as { status: string | null }[];
-            const total = rows.length;
-            let present = 0, absent = 0, late = 0, excused = 0;
-            for (const r of rows) {
-                const s = (r.status || '').toLowerCase();
-                if (s === 'present') present++;
-                else if (s === 'absent') absent++;
-                else if (s === 'late') late++;
-                else if (s === 'excused') excused++;
-            }
+            const rows = data as unknown as { present: number; absent: number; late: number; excused: number; half_day: number; marked: number }[];
+            const present = rows.reduce((sum, row) => sum + row.present, 0);
+            const absent = rows.reduce((sum, row) => sum + row.absent, 0);
+            const late = rows.reduce((sum, row) => sum + row.late, 0);
+            const total = rows.reduce((sum, row) => sum + row.marked, 0);
+            const excused = rows.reduce((sum, row) => sum + row.excused, 0);
+            const halfDay = rows.reduce((sum, row) => sum + row.half_day, 0);
             const pct = total ? Math.round((present / total) * 100) : 0;
-            return { total, present, absent, late, excused, pct };
+            return { total, present, absent, late, excused, halfDay, pct };
         },
     });
 
@@ -130,10 +124,10 @@ const AttendanceSnapshot: React.FC<{ schoolId: string | null }> = ({ schoolId })
                     <p className="text-xs text-muted">Live snapshot across all classes</p>
                 </div>
                 <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-primary bg-teal-50 border border-teal-100 px-2 py-1 rounded-full">
-                    <ClipboardCheck className="w-3 h-3" /> {new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
+                    <ClipboardCheck className="w-3 h-3" /> School local day
                 </span>
             </div>
-            {isLoading ? (
+            {error ? <p role="alert" className="py-4 text-sm text-rose-700">Attendance could not be loaded: {error.message}</p> : isLoading ? (
                 <div className="py-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-muted" /></div>
             ) : !data || data.total === 0 ? (
                 <div className="py-8 text-center">
@@ -157,12 +151,14 @@ const AttendanceSnapshot: React.FC<{ schoolId: string | null }> = ({ schoolId })
                         <div className="bg-primary h-full" style={{ width: `${(data.present / data.total) * 100}%` }} />
                         <div className="bg-amber-400 h-full" style={{ width: `${(data.late / data.total) * 100}%` }} />
                         <div className="bg-sky-400 h-full" style={{ width: `${(data.excused / data.total) * 100}%` }} />
+                        <div className="bg-violet-400 h-full" style={{ width: `${(data.halfDay / data.total) * 100}%` }} />
                         <div className="bg-rose-400 h-full" style={{ width: `${(data.absent / data.total) * 100}%` }} />
                     </div>
                     <div className="grid grid-cols-4 gap-2 mt-4">
                         <StatPill label="Present" value={data.present} dot="bg-primary" />
                         <StatPill label="Late" value={data.late} dot="bg-amber-400" />
                         <StatPill label="Excused" value={data.excused} dot="bg-sky-400" />
+                        <StatPill label="Half day" value={data.halfDay} dot="bg-violet-400" />
                         <StatPill label="Absent" value={data.absent} dot="bg-rose-400" />
                     </div>
                 </div>
@@ -236,10 +232,14 @@ const TeacherClasses: React.FC<{ teacherId: string; schoolId: string | null }> =
 
 const Dashboard: React.FC = () => {
     const { user, role, roles, switchDashboardRole, linkedStudents, activeStudentId } = useAuth();
-    const effectiveStudentId = activeStudentId
-        ?? linkedStudents.find(s => s.isPrimary)?.studentId
-        ?? linkedStudents[0]?.studentId
+    const currentPersona = linkedStudents.find(s => s.studentId === activeStudentId)
+        ?? (role === 'student' ? linkedStudents.find(s => s.studentId === user?.id || s.relationship === 'self_student') : null)
+        ?? linkedStudents.find(s => s.isPrimary)
+        ?? linkedStudents[0]
         ?? null;
+
+    const effectiveStudentId = currentPersona?.studentId
+        ?? (role === 'student' ? user?.id : null);
 
     const navigate = useNavigate();
     const qc = useQueryClient();
@@ -303,6 +303,24 @@ const Dashboard: React.FC = () => {
                             <p className="text-muted">
                                 {role === 'admin' ? 'Live snapshot of your school today.' : role === 'student' ? 'Track your learning, attendance, and school updates.' : role === 'parent' ? 'Track your ward’s attendance, fees, performance, and updates.' : "Here's an overview of your workspace."}
                             </p>
+
+                            {/* Assigned Class Banner (Student & Parent) */}
+                            {(role === 'student' || role === 'parent') && currentPersona?.className && (
+                                <div className="mt-3 flex items-center gap-2.5 flex-wrap">
+                                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-teal-50 border border-teal-200 text-teal-900 shadow-2xs">
+                                        <School className="w-4 h-4 text-primary shrink-0" />
+                                        <span className="text-xs font-bold">
+                                            Class: <span className="text-primary font-extrabold">{currentPersona.className}</span>
+                                            {currentPersona.sectionName ? ` • Section ${currentPersona.sectionName}` : ''}
+                                        </span>
+                                    </div>
+                                    {role === 'parent' && (
+                                        <span className="text-xs font-medium text-stone-600 bg-white/90 border border-stone-200 px-2.5 py-1 rounded-xl shadow-2xs">
+                                            Ward: <strong className="text-stone-800">{currentPersona.fullName}</strong>
+                                        </span>
+                                    )}
+                                </div>
+                            )}
                         </div>
                         <div className="relative z-10 flex w-full items-end justify-between gap-4 md:w-auto md:flex-col md:items-end md:justify-start">
                             {((roles.includes('student') && roles.includes('parent')) || (roles.includes('parent') && linkedStudents.some(s => !s.studentStatus || s.studentStatus === 'active'))) && (
@@ -344,9 +362,13 @@ const Dashboard: React.FC = () => {
                             ) : (
                                 <div className="clay-card p-10 text-center text-stone-500 rounded-3xl">
                                     <GraduationCap className="w-12 h-12 mx-auto text-stone-300 mb-3" />
-                                    <h3 className="text-lg font-bold text-foreground">No Student Profile Linked</h3>
+                                    <h3 className="text-lg font-bold text-foreground">
+                                        {role === 'student' ? 'Student Profile Incomplete' : 'No Student Profile Linked'}
+                                    </h3>
                                     <p className="text-sm text-muted mt-1 max-w-md mx-auto">
-                                        No active student profile is currently linked to this family account. Please contact your school administration to link your ward's profile.
+                                        {role === 'student'
+                                            ? 'Your student account is missing profile details. Please contact your school administrator to complete your student profile setup.'
+                                            : "No active student profile is currently linked to this family account. Please contact your school administration to link your ward's profile."}
                                     </p>
                                 </div>
                             )}
@@ -418,14 +440,14 @@ const Dashboard: React.FC = () => {
                             </div>
 
                             {/* Today's Attendance Snapshot */}
-                            <AttendanceSnapshot schoolId={user?.schoolId ?? null} />
+                            {(role === 'admin' || role === 'teacher') && <AttendanceSnapshot schoolId={user?.schoolId ?? null} />}
 
                         </div>
 
                         {/* Right: teacher classes or school finance overview */}
                         <div className="xl:col-span-2 space-y-8">
                             {role === 'teacher' ? (
-                                <TeacherClasses teacherId={user!.id} schoolId={user?.schoolId ?? null} />
+                                <><TodayTimetable schoolId={user?.schoolId ?? null} teacherId={user!.id} /><TeacherClasses teacherId={user!.id} schoolId={user?.schoolId ?? null} /></>
                             ) : <>
                             <div className="clay-card p-6">
                                 <div className="flex justify-between items-center mb-6">

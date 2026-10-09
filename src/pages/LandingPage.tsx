@@ -8,15 +8,15 @@ const LandingPage: React.FC = () => {
     const { user, role } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
-    const authorizationId = new URLSearchParams(location.search).get('authorization_id');
+    const requestId = new URLSearchParams(location.search).get('request_id');
 
     useEffect(() => {
-        if (user && role && authorizationId) navigate(`/oauth/consent?authorization_id=${encodeURIComponent(authorizationId)}`, { replace: true });
-    }, [authorizationId, navigate, role, user]);
+        if (user && role && requestId) navigate(`/oauth/consent?request_id=${encodeURIComponent(requestId)}`, { replace: true });
+    }, [requestId, navigate, role, user]);
 
     const handleEnterClick = () => {
         if (user && role) {
-            if (authorizationId) { navigate(`/oauth/consent?authorization_id=${encodeURIComponent(authorizationId)}`); return; }
+            if (requestId) { navigate(`/oauth/consent?request_id=${encodeURIComponent(requestId)}`); return; }
             if (role === 'superadmin') {
                 navigate('/super-admin');
             } else {
@@ -83,7 +83,7 @@ const LandingPage: React.FC = () => {
                 <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-emerald-900/10 shadow-sm mb-8 animate-fade-up">
                         <span className="w-2 h-2 rounded-full bg-lime-400 animate-pulse"></span>
-                        <span className="text-xs font-bold text-emerald-900 tracking-wide uppercase">Super Admin Network v2.0 is live</span>
+                        <span className="text-xs font-bold text-emerald-900 tracking-wide uppercase">School announcements are now live</span>
                     </div>
 
                     <h1 className="text-5xl md:text-7xl font-extrabold text-emerald-900 tracking-tight mb-6 leading-[1.1] animate-fade-up delay-100">

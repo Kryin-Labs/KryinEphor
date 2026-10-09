@@ -17,10 +17,11 @@ interface Props {
     schoolId: string;
     teacherName?: string | null;
     canEdit: boolean;
+    canMarkAttendance: boolean;
     onEdit: () => void;
 }
 
-const ClassDetailDrawer: React.FC<Props> = ({ open, onClose, klass, schoolId, teacherName, canEdit, onEdit }) => {
+const ClassDetailDrawer: React.FC<Props> = ({ open, onClose, klass, schoolId, teacherName, canEdit, canMarkAttendance, onEdit }) => {
     const [tab, setTab] = useState<Tab>('overview');
 
     if (!klass) return null;
@@ -63,7 +64,7 @@ const ClassDetailDrawer: React.FC<Props> = ({ open, onClose, klass, schoolId, te
                 {tab === 'overview' && <OverviewTab klass={klass} teacherName={teacherName} />}
                 {tab === 'roster' && <RosterTab classId={klass.id} schoolId={schoolId} canEdit={canEdit} />}
                 {tab === 'teachers' && <TeachersSubjectsTab classId={klass.id} schoolId={schoolId} canEdit={canEdit} />}
-                {tab === 'attendance' && <AttendanceTab classId={klass.id} canEdit={canEdit} />}
+                {tab === 'attendance' && <AttendanceTab classId={klass.id} schoolId={schoolId} canEdit={canMarkAttendance} />}
                 {tab === 'fees' && <FeesTab classId={klass.id} schoolId={schoolId} canEdit={canEdit} />}
             </div>
         </Drawer>

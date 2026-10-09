@@ -17,7 +17,7 @@ const getCorsHeaders = (req: Request) => {
         .split(',')
         .map((value) => value.trim())
         .filter(Boolean);
-    const allowedOrigins = new Set(['https://kryinedu.lovable.app', ...configured]);
+    const allowedOrigins = new Set(['https://kryinedu.lovable.app', 'https://kryin-ephor.vercel.app', ...configured]);
     const allowOrigin = allowedOrigins.has(origin) || /^https:\/\/[a-z0-9-]+\.(lovable\.app|lovableproject\.com|sandbox\.lovable\.dev)$/i.test(origin)
         ? origin
         : 'https://kryinedu.lovable.app';

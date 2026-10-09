@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Plus, Loader2, Search, AlertCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
-import { currency, Modal, Pill } from './shared';
+import { Modal, Pill } from './shared';
+import { currency } from './format';
 
 interface Charge {
     id: string; student_id: string; category: string; description: string;
@@ -21,16 +22,15 @@ const AdditionalChargesTab: React.FC<Props> = ({ schoolId }) => {
     const [form, setForm] = useState({ student_id: '', category: 'fine', description: '', amount: '' });
     const [saving, setSaving] = useState(false);
 
-    const load = async () => {
-        setLoading(true);
+    const load = useCallback(async () => {
         const [c, s] = await Promise.all([
             supabase.from('additional_charges').select('*').eq('school_id', schoolId).order('applied_at', { ascending: false }).limit(500),
             supabase.from('profiles').select('id,full_name,email').eq('school_id', schoolId).eq('role', 'student').limit(1000),
         ]);
         setRows(c.data ?? []); setStudents(s.data ?? []);
         setLoading(false);
-    };
-    useEffect(() => { load(); }, [schoolId]);
+    }, [schoolId]);
+    useEffect(() => { const timer = setTimeout(() => void load(), 0); return () => clearTimeout(timer); }, [load]);
 
     const save = async () => {
         if (!form.student_id || !form.description || !form.amount) return toast.error('All fields required');

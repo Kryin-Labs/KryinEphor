@@ -15,7 +15,14 @@ test('installable app icons match their declared sizes', async () => {
   }
 });
 
-test('Vercel serves direct announcement links through the SPA', async () => {
+test('Vercel serves page links through the SPA without swallowing API routes', async () => {
   const config = JSON.parse(await readFile('vercel.json', 'utf8'));
-  assert.ok(config.rewrites.some(rule => rule.source === '/(.*)' && rule.destination === '/index.html'));
+  const pages = config.rewrites.filter(rule => rule.destination === '/index.html');
+  const isPage = path => pages.some(rule => new RegExp(`^${rule.source}$`).test(path));
+  for (const path of ['/announcements', '/announcements/example', '/timetable', '/ai-connections', '/oauth/consent']) {
+    assert.ok(isPage(path), `${path} should reach the app`);
+  }
+  for (const path of ['/api/mcp', '/api/mcp-actions', '/api/oauth/token']) {
+    assert.equal(isPage(path), false, `${path} must remain an API endpoint`);
+  }
 });

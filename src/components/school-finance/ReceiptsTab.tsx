@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Search, Download, Receipt as ReceiptIcon } from 'lucide-react';
-import { currency } from './shared';
+import { currency } from './format';
 import { useReceiptsPage, useSchoolStudents } from '../../hooks/queries';
 import QueryBoundary from '../ui/QueryBoundary';
 import Pagination from '../ui/Pagination';
@@ -18,7 +18,6 @@ const ReceiptsTab: React.FC<Props> = ({ schoolId }) => {
         const t = setTimeout(() => { setQ(qInput.trim()); setPage(0); }, 300);
         return () => clearTimeout(t);
     }, [qInput]);
-    useEffect(() => { setPage(0); }, [schoolId]);
 
     const receiptsQuery = useReceiptsPage(schoolId, q, page, PAGE_SIZE);
     const studentsQuery = useSchoolStudents(schoolId);

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Menu, X, ChevronLeft, ChevronRight, TimerReset, ClipboardPenLine, ChartNoAxesCombined } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, TimerReset, ClipboardPenLine, ChartNoAxesCombined, CalendarDays, Link2 } from 'lucide-react';
 import {
     LayoutDashboard,
     Users,
@@ -35,9 +35,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage = 'Dashboard' }) => {
         if (typeof window === 'undefined') return false;
         return localStorage.getItem('sidebar:collapsed') === '1';
     });
-
-    // Close drawer on route change
-    useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
     // Lock body scroll when drawer is open
     useEffect(() => {
@@ -74,7 +71,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage = 'Dashboard' }) => {
         'CheckSquare': CheckSquare,
         'TimerReset': TimerReset,
         'ClipboardPenLine': ClipboardPenLine,
-        'ChartNoAxesCombined': ChartNoAxesCombined
+        'ChartNoAxesCombined': ChartNoAxesCombined,
+        'CalendarDays': CalendarDays,
+        'Link2': Link2
     };
 
     const activeRole = role || (roles.length > 0 ? roles[0] : null);
@@ -88,7 +87,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage = 'Dashboard' }) => {
             return [
                 {
                     title: "Overview",
-                    items: allowedRoutes.filter(r => ['Dashboard', 'Announcements'].includes(r.label))
+                    items: allowedRoutes.filter(r => ['Dashboard', 'Announcements', 'Timetable', 'AI Connections'].includes(r.label)
+                        && (r.label !== 'AI Connections' || roles.includes('parent')))
                 },
                 {
                     title: "Student Portal",
@@ -106,7 +106,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage = 'Dashboard' }) => {
             return [
                 {
                     title: "Overview",
-                    items: allowedRoutes.filter(r => ['Dashboard', 'Announcements'].includes(r.label))
+                    items: allowedRoutes.filter(r => ['Dashboard', 'Announcements', 'Timetable', 'AI Connections'].includes(r.label)
+                        && (r.label !== 'AI Connections' || roles.includes('student')))
                 },
                 {
                     title: "Parent Portal",
@@ -127,7 +128,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage = 'Dashboard' }) => {
             {
                 title: "Academics",
                 items: [
-                    ...allowedRoutes.filter(r => ['Classes', 'Attendance'].includes(r.label)),
+                    ...allowedRoutes.filter(r => ['Classes', 'Attendance', 'Timetable'].includes(r.label)),
                     ...(activeRole === 'admin' || activeRole === 'teacher'
                         ? [{ path: '/manage-tests', label: 'Tests', icon: 'FileText' }, { path: '/marks', label: 'Marks', icon: 'ClipboardPenLine' }]
                         : [])
@@ -139,25 +140,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage = 'Dashboard' }) => {
             },
             {
                 title: "System",
-                items: allowedRoutes.filter(r => ['System Alerts', 'Global Setup'].includes(r.label))
+                items: allowedRoutes.filter(r => ['System Alerts', 'Global Setup', 'AI Connections'].includes(r.label))
             }
         ].filter(g => g.items.length > 0);
     })();
 
     return (
         <>
-            {/* Mobile hamburger trigger — bottom-right, hidden while drawer open */}
-            {false && !mobileOpen && (
-                <button
-                    type="button"
-                    onClick={() => setMobileOpen(true)}
-                    aria-label="Open menu"
-                    className="lg:hidden fixed bottom-5 right-5 z-[60] w-14 h-14 rounded-full bg-primary text-white shadow-xl shadow-teal-900/30 border border-teal-700/20 flex items-center justify-center active:scale-95 hover:scale-105 transition"
-                >
-                    <Menu className="w-6 h-6" />
-                </button>
-            )}
-
 
 
             {/* Mobile backdrop */}

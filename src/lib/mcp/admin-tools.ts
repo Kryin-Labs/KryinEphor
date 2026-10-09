@@ -1,6 +1,7 @@
 import { defineTool } from '@lovable.dev/mcp-js';
 import { z } from 'zod';
 import { failIfError, getActor, success, tool } from './support.js';
+import { addDays } from '../timetable.js';
 
 const limit = z.number().int().min(1).max(50).default(20);
 
@@ -68,10 +69,9 @@ export const classStudentsTool = defineTool({
     inputSchema: { class_id: z.string().uuid() }, annotations: { readOnlyHint: true, openWorldHint: false },
     handler: (input, ctx) => tool(async () => {
         const actor = await getActor(ctx, 'admin');
-        const { data, error } = await actor.client.from('class_enrollments')
-            .select('student_id, profiles:student_id(full_name, email)').eq('class_id', input.class_id).eq('school_id', actor.schoolId).is('deleted_at', null);
+        const { data, error } = await actor.client.rpc('fn_class_attendance_roster', { p_class: input.class_id });
         failIfError(error);
-        return success({ class_id: input.class_id, students: data ?? [] });
+        return success({ class_id: input.class_id, students: (data as { students: unknown[] }).students });
     }),
 });
 
@@ -80,18 +80,15 @@ export const classAttendanceTool = defineTool({
     inputSchema: { class_id: z.string().uuid(), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }, annotations: { readOnlyHint: true, openWorldHint: false },
     handler: (input, ctx) => tool(async () => {
         const actor = await getActor(ctx, 'admin');
-        const [students, attendance] = await Promise.all([
-            actor.client.from('class_enrollments').select('student_id, profiles:student_id(full_name, email)').eq('class_id', input.class_id).eq('school_id', actor.schoolId).is('deleted_at', null),
-            actor.client.from('attendance').select('student_id, status, notes').eq('class_id', input.class_id).eq('school_id', actor.schoolId).eq('date', input.date).is('deleted_at', null),
-        ]);
-        failIfError(students.error); failIfError(attendance.error);
-        return success({ class_id: input.class_id, date: input.date, students: students.data ?? [], attendance: attendance.data ?? [] });
+        const { data, error } = await actor.client.rpc('fn_class_attendance_roster', { p_class: input.class_id, p_date: input.date });
+        failIfError(error);
+        return success({ class_id: input.class_id, date: input.date, ...(data as { students: unknown[]; existing: unknown[] }) });
     }),
 });
 
 export const markAttendanceTool = defineTool({
-    name: 'admin_mark_class_attendance', title: 'Mark class attendance', description: 'Save present, absent, or late attendance for students in a class. Confirm the date and marks with the administrator before calling.',
-    inputSchema: { class_id: z.string().uuid(), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), marks: z.array(z.object({ student_id: z.string().uuid(), status: z.enum(['present', 'absent', 'late']) })).min(1).max(200) },
+    name: 'admin_mark_class_attendance', title: 'Mark class attendance', description: 'Save daily attendance for the complete active class roster. Read the roster first and confirm the school-local date and all marks.',
+    inputSchema: { class_id: z.string().uuid(), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), marks: z.array(z.object({ student_id: z.string().uuid(), status: z.enum(['present', 'absent', 'late', 'excused', 'half_day']), notes: z.string().max(500).nullable().optional() })).min(1).max(500) },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     handler: (input, ctx) => tool(async () => {
         const actor = await getActor(ctx, 'admin');
@@ -106,20 +103,25 @@ export const markAttendanceTool = defineTool({
 
 export const attendanceReportTool = defineTool({
     name: 'admin_attendance_report', title: 'Attendance report',
-    description: 'Attendance summary for one class over a date range: per-student present, absent, and late counts.',
+    description: 'Attendance summary for one class over up to 366 dates, including all five attendance statuses.',
     inputSchema: { class_id: z.string().uuid(), from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) },
     annotations: { readOnlyHint: true, openWorldHint: false },
     handler: (input, ctx) => tool(async () => {
         const actor = await getActor(ctx, 'admin');
-        const { data, error } = await actor.client.from('attendance')
-            .select('student_id, status, profiles:student_id(full_name)')
-            .eq('class_id', input.class_id).eq('school_id', actor.schoolId)
-            .gte('date', input.from).lte('date', input.to).is('deleted_at', null);
-        failIfError(error);
-        const byStudent: Record<string, { name: string; present: number; absent: number; late: number }> = {};
-        for (const row of data ?? []) {
-            const entry = byStudent[row.student_id] ??= { name: (row.profiles as unknown as { full_name?: string } | null)?.full_name ?? 'Unknown', present: 0, absent: 0, late: 0 };
-            if (row.status === 'present' || row.status === 'absent' || row.status === 'late') entry[row.status] += 1;
+        if (input.to < input.from || input.to > addDays(input.from, 365)) throw new Error('Choose a range of up to 366 dates.');
+        const byStudent: Record<string, { name: string; present: number; absent: number; late: number; excused: number; half_day: number }> = {};
+        for (let page = 0; ; page++) {
+            const { data, error } = await actor.client.from('attendance')
+                .select('student_id, status, profiles:student_id(full_name)')
+                .eq('class_id', input.class_id).eq('school_id', actor.schoolId)
+                .gte('date', input.from).lte('date', input.to).is('deleted_at', null)
+                .order('id').range(page * 1000, page * 1000 + 999);
+            failIfError(error);
+            for (const row of data ?? []) {
+                const entry = byStudent[row.student_id] ??= { name: (row.profiles as unknown as { full_name?: string } | null)?.full_name ?? 'Unknown', present: 0, absent: 0, late: 0, excused: 0, half_day: 0 };
+                if (row.status === 'present' || row.status === 'absent' || row.status === 'late' || row.status === 'excused' || row.status === 'half_day') entry[row.status] += 1;
+            }
+            if (!data || data.length < 1000) break;
         }
         return success({ class_id: input.class_id, from: input.from, to: input.to, students: Object.entries(byStudent).map(([student_id, stats]) => ({ student_id, ...stats })) });
     }),

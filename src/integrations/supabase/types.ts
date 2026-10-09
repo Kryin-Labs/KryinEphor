@@ -3936,8 +3936,10 @@ export type Database = {
       schools: {
         Row: {
           address: string | null
+          ai_connections_enabled: boolean
           archived_at: string | null
           city: string | null
+          combined_parent_student_account: boolean
           country: string | null
           created_at: string | null
           created_by: string | null
@@ -3962,14 +3964,17 @@ export type Database = {
             | Database["public"]["Enums"]["subscription_status_t"]
             | null
           subscription_tier: string | null
+          time_zone: string
           updated_at: string | null
           updated_by: string | null
           website: string | null
         }
         Insert: {
           address?: string | null
+          ai_connections_enabled?: boolean
           archived_at?: string | null
           city?: string | null
+          combined_parent_student_account?: boolean
           country?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -3994,14 +3999,17 @@ export type Database = {
             | Database["public"]["Enums"]["subscription_status_t"]
             | null
           subscription_tier?: string | null
+          time_zone?: string
           updated_at?: string | null
           updated_by?: string | null
           website?: string | null
         }
         Update: {
           address?: string | null
+          ai_connections_enabled?: boolean
           archived_at?: string | null
           city?: string | null
+          combined_parent_student_account?: boolean
           country?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -4026,6 +4034,7 @@ export type Database = {
             | Database["public"]["Enums"]["subscription_status_t"]
             | null
           subscription_tier?: string | null
+          time_zone?: string
           updated_at?: string | null
           updated_by?: string | null
           website?: string | null
@@ -4786,12 +4795,66 @@ export type Database = {
           },
         ]
       }
+      timetable_drafts: {
+        Row: {
+          id: string; school_id: string; class_id: string; author_id: string
+          kind: string; target_id: string | null; base_id: string | null
+          academic_year_id: string | null; start_date: string | null; end_date: string | null
+          day_of_week: number; start_time: string; end_time: string
+          subject_id: string; teacher_id: string | null; room: string | null
+          cancelled: boolean; created_at: string
+        }
+        Insert: {
+          id?: string; school_id: string; class_id: string; author_id: string
+          kind: string; target_id?: string | null; base_id?: string | null
+          academic_year_id?: string | null; start_date?: string | null; end_date?: string | null
+          day_of_week: number; start_time: string; end_time: string
+          subject_id: string; teacher_id?: string | null; room?: string | null
+          cancelled?: boolean; created_at?: string
+        }
+        Update: {
+          id?: string; school_id?: string; class_id?: string; author_id?: string
+          kind?: string; target_id?: string | null; base_id?: string | null
+          academic_year_id?: string | null; start_date?: string | null; end_date?: string | null
+          day_of_week?: number; start_time?: string; end_time?: string
+          subject_id?: string; teacher_id?: string | null; room?: string | null
+          cancelled?: boolean; created_at?: string
+        }
+        Relationships: []
+      }
+      timetable_exceptions: {
+        Row: {
+          id: string; school_id: string; class_id: string; base_id: string | null
+          academic_year_id: string | null; start_date: string; end_date: string
+          day_of_week: number; start_time: string; end_time: string
+          subject_id: string; teacher_id: string | null; room: string | null
+          cancelled: boolean; created_at: string
+        }
+        Insert: {
+          id?: string; school_id: string; class_id: string; base_id?: string | null
+          academic_year_id?: string | null; start_date: string; end_date: string
+          day_of_week: number; start_time: string; end_time: string
+          subject_id: string; teacher_id?: string | null; room?: string | null
+          cancelled?: boolean; created_at?: string
+        }
+        Update: {
+          id?: string; school_id?: string; class_id?: string; base_id?: string | null
+          academic_year_id?: string | null; start_date?: string; end_date?: string
+          day_of_week?: number; start_time?: string; end_time?: string
+          subject_id?: string; teacher_id?: string | null; room?: string | null
+          cancelled?: boolean; created_at?: string
+        }
+        Relationships: []
+      }
       timetable: {
         Row: {
+          academic_year_id: string | null
           class_id: string
           created_at: string | null
           day_of_week: number
           deleted_at: string | null
+          effective_end: string | null
+          effective_start: string | null
           end_time: string
           id: string
           room: string | null
@@ -4801,10 +4864,13 @@ export type Database = {
           teacher_id: string | null
         }
         Insert: {
+          academic_year_id?: string | null
           class_id: string
           created_at?: string | null
           day_of_week: number
           deleted_at?: string | null
+          effective_end?: string | null
+          effective_start?: string | null
           end_time: string
           id?: string
           room?: string | null
@@ -4814,10 +4880,13 @@ export type Database = {
           teacher_id?: string | null
         }
         Update: {
+          academic_year_id?: string | null
           class_id?: string
           created_at?: string | null
           day_of_week?: number
           deleted_at?: string | null
+          effective_end?: string | null
+          effective_start?: string | null
           end_time?: string
           id?: string
           room?: string | null
@@ -5338,6 +5407,19 @@ export type Database = {
       }
     }
     Functions: {
+      timetable_save_draft: { Args: { p_data: Json }; Returns: string }
+      timetable_set_zone: { Args: { p_zone: string }; Returns: undefined }
+      timetable_publish_draft: { Args: { p_id: string }; Returns: string }
+      timetable_discard_draft: { Args: { p_id: string }; Returns: undefined }
+      timetable_schedule: {
+        Args: { p_from: string; p_to: string; p_class?: string | null }
+        Returns: {
+          id: string; base_id: string | null; class_id: string; lesson_date: string
+          day_of_week: number; start_time: string; end_time: string
+          subject_id: string; teacher_id: string | null; room: string | null
+          subject_name: string; teacher_name: string | null; class_name: string; source: string
+        }[]
+      }
       can_manage_recovery_email: {
         Args: { _actor_id: string; _target_user_id: string }
         Returns: boolean
@@ -5675,6 +5757,29 @@ export type Database = {
       fn_mark_class_attendance: {
         Args: { p_class: string; p_date: string; p_marks: Json }
         Returns: number
+      }
+      fn_attendance_summary: {
+        Args: { p_date: string | null }
+        Returns: Json
+      }
+      fn_class_attendance_roster: {
+        Args: { p_class: string; p_date?: string }
+        Returns: Json
+      }
+      timetable_preview_draft: {
+        Args: { p_id: string }
+        Returns: Json
+      }
+      mcp_child_announcements: {
+        Args: { p_student: string }
+        Returns: {
+          id: string
+          title: string
+          body: string
+          published_at: string | null
+          expires_at: string | null
+          audience: string
+        }[]
       }
       fn_mark_invoice_paid: {
         Args: { p_actor: string; p_invoice: string }

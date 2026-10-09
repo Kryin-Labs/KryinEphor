@@ -116,9 +116,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const refreshPersonaSummary = useCallback(async () => {
         try {
             const { data, error } = await supabase.rpc('fn_get_my_persona_summary');
-            if (!error && data && (data as any).success) {
-                const rawStudents = (data as any).linked_students || [];
-                const parsed: LinkedStudentPersona[] = rawStudents.map((s: any) => ({
+            const summary = data as { success?: boolean; linked_students?: Array<{
+                student_id: string; full_name: string; email: string; school_id: string;
+                relationship: string; is_primary?: boolean; avatar_url?: string | null;
+                class_name?: string | null; section_name?: string | null;
+                status?: string | null; student_status?: string | null;
+            }> } | null;
+            if (!error && summary?.success) {
+                const rawStudents = summary.linked_students || [];
+                const parsed: LinkedStudentPersona[] = rawStudents.map(s => ({
                     studentId: s.student_id,
                     fullName: s.full_name,
                     email: s.email,
@@ -280,7 +286,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         setLoading(false);
-    }, []);
+    }, [refreshPersonaSummary]);
 
     /**
      * On mount: rely on onAuthStateChange (fires INITIAL_SESSION immediately).

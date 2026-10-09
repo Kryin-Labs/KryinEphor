@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Loader2, Trash2, Users, Search } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
-import { currency, Modal, Pill } from './shared';
+import { Modal, Pill } from './shared';
+import { currency } from './format';
 
 interface Assignment {
     id: string; student_id: string; plan_id: string;
@@ -25,8 +26,7 @@ const AssignmentsTab: React.FC<Props> = ({ schoolId }) => {
     const [form, setForm] = useState({ student_ids: [] as string[], plan_id: '', discount_pct: 0, scholarship_amount: 0, start_date: new Date().toISOString().slice(0, 10) });
     const [saving, setSaving] = useState(false);
 
-    const load = async () => {
-        setLoading(true);
+    const load = useCallback(async () => {
         const [a, s, p] = await Promise.all([
             supabase.from('student_fee_assignments').select('*').eq('school_id', schoolId).order('created_at', { ascending: false }),
             supabase.from('profiles').select('id,full_name,email').eq('school_id', schoolId).eq('role', 'student').eq('is_active', true).limit(1000),
@@ -34,8 +34,8 @@ const AssignmentsTab: React.FC<Props> = ({ schoolId }) => {
         ]);
         setRows(a.data ?? []); setStudents(s.data ?? []); setPlans(p.data ?? []);
         setLoading(false);
-    };
-    useEffect(() => { load(); }, [schoolId]);
+    }, [schoolId]);
+    useEffect(() => { const timer = setTimeout(() => void load(), 0); return () => clearTimeout(timer); }, [load]);
 
     const save = async () => {
         if (!form.plan_id || form.student_ids.length === 0) return toast.error('Choose plan and at least one student');

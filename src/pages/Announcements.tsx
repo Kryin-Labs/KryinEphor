@@ -131,18 +131,18 @@ export default function Announcements() {
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not enable background alerts.'); }
   };
 
-  return <div className="flex min-h-screen bg-[#f8f7f3]">
+  return <div className="flex min-h-screen bg-[#FAF9F6]">
     <Sidebar activePage="Announcements" />
     <div className="flex min-h-screen flex-1 flex-col lg:ml-72">
       <Header title="Announcements" />
-      <main className="mx-auto w-full max-w-6xl flex-1 space-y-7 p-5 pb-24 sm:p-8">
-        <section className="overflow-hidden rounded-[2rem] bg-[#183d36] px-6 py-8 text-white shadow-xl sm:px-9 sm:py-10">
-          <div className="flex flex-wrap items-end justify-between gap-6">
-            <div><div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[.22em] text-lime-200"><Megaphone size={17} /> School communications</div>
-              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">The announcement board</h1>
-              <p className="mt-2 max-w-xl text-sm leading-6 text-emerald-100">Messages for your school and classes, all in one place. Times are shown in your device’s time zone.</p><p className="mt-1 text-xs text-emerald-200">On iPhone or iPad, add this site to your Home Screen before enabling device alerts.</p></div>
-            <div className="flex flex-wrap gap-2"><button type="button" onClick={enableAlerts} className="inline-flex items-center gap-2 rounded-xl border border-emerald-300 px-5 py-3 text-sm font-bold text-white hover:bg-white/10"><BellRing size={17} /> {permission === 'granted' ? 'Sync device alerts' : 'Enable device alerts'}</button>{canCompose && <button type="button" onClick={() => setForm(blank(role === 'superadmin' ? null : user?.schoolId ?? null, teacher))} className="inline-flex items-center gap-2 rounded-xl bg-lime-300 px-5 py-3 text-sm font-bold text-emerald-950 hover:bg-lime-200"><Plus size={17} /> New announcement</button>}</div>
-          </div>
+      <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 p-6 pb-20 md:p-8 lg:p-10">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div><h1 className="flex items-center gap-2 text-2xl font-bold text-foreground"><Megaphone className="h-6 w-6 text-primary" /> Announcements</h1><p className="mt-1 text-sm text-muted">Messages for your school and classes. Times are shown in your device’s time zone.</p></div>
+          {canCompose && <button type="button" onClick={() => setForm(blank(role === 'superadmin' ? null : user?.schoolId ?? null, teacher))} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-primary/20 hover:bg-teal-800"><Plus size={17} /> New announcement</button>}
+        </div>
+        <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-[#183d36] px-5 py-5 text-white shadow-md sm:px-7" aria-label="Device alerts">
+          <div><h2 className="flex items-center gap-2 font-bold"><BellRing size={18} /> Stay up to date</h2><p className="mt-1 text-sm text-emerald-100">Get an alert when a new announcement is published.</p><p className="mt-1 text-xs text-emerald-200">On iPhone or iPad, add this site to your Home Screen first.</p></div>
+          <button type="button" onClick={enableAlerts} className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 px-4 py-2.5 text-sm font-bold text-white hover:bg-white/10"><BellRing size={16} /> {permission === 'granted' ? 'Sync device alerts' : 'Enable device alerts'}</button>
         </section>
         <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold text-stone-900">Latest updates</h2><p className="text-xs text-stone-500">{visible.length} {visible.length === 1 ? 'message' : 'messages'} visible to you</p></div><input aria-label="Search announcements" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search announcements" className={`${inputClass} max-w-xs`} /></div>
         {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">Could not load announcements: {error.message}</div>}

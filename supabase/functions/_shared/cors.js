@@ -1,4 +1,5 @@
 const LOVABLE_ORIGIN = 'https://kryinedu.lovable.app';
+const KRYIN_EPHOR_ORIGIN = 'https://kryin-ephor.vercel.app';
 const LOVABLE_PREVIEW_ORIGIN = /^https:\/\/[a-z0-9-]+\.(lovable\.app|lovableproject\.com|sandbox\.lovable\.dev)$/i;
 const LOCAL_DEVELOPMENT_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(?::\d{1,5})?$/i;
 
@@ -12,6 +13,7 @@ export function resolveCorsOrigin(origin, configuredOrigins = []) {
   const configured = new Set(configuredOrigins.filter(Boolean));
   if (
     origin === LOVABLE_ORIGIN ||
+    origin === KRYIN_EPHOR_ORIGIN ||
     LOVABLE_PREVIEW_ORIGIN.test(origin) ||
     LOCAL_DEVELOPMENT_ORIGIN.test(origin) ||
     configured.has(origin)

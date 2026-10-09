@@ -1,8 +1,15 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { mcpPublicUrl } from './config.js';
 
 const readBody = async (request: IncomingMessage) => {
     const chunks: Uint8Array[] = [];
-    for await (const chunk of request) chunks.push(typeof chunk === 'string' ? new TextEncoder().encode(chunk) : chunk);
+    let size = 0;
+    for await (const chunk of request) {
+        const bytes = typeof chunk === 'string' ? new TextEncoder().encode(chunk) : chunk;
+        size += bytes.length;
+        if (size > 1_048_576) throw new Error('Request body exceeds 1 MB.');
+        chunks.push(bytes);
+    }
     return chunks.length ? Buffer.concat(chunks) : undefined;
 };
 
@@ -12,11 +19,9 @@ export const toWebRequest = async (request: IncomingMessage) => {
         if (Array.isArray(value)) value.forEach((item) => headers.append(key, item));
         else if (value) headers.set(key, value);
     });
-    const scheme = (request.headers['x-forwarded-proto'] as string | undefined) ?? 'https';
-    const host = request.headers.host ?? 'kryin-space.vercel.app';
     const method = request.method ?? 'GET';
     const body = ['GET', 'HEAD'].includes(method) ? undefined : await readBody(request);
-    return new Request(`${scheme}://${host}${request.url ?? '/'}`, { method, headers, body });
+    return new Request(`${mcpPublicUrl}${request.url ?? '/'}`, { method, headers, body });
 };
 
 export const sendWebResponse = async (response: Response, target: ServerResponse) => {

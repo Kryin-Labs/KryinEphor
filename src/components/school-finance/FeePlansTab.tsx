@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Plus, Loader2, Trash2, Edit3, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
-import { currency, Modal } from './shared';
+import { Modal } from './shared';
+import { currency } from './format';
 
 interface FeePlan {
     id: string; name: string; frequency: string; class_id: string | null;
@@ -20,14 +21,13 @@ const FeePlansTab: React.FC<Props> = ({ schoolId, autoOpen = false }) => {
     const [heads, setHeads] = useState<FeeHead[]>([]);
     const [classes, setClasses] = useState<ClassRow[]>([]);
     const [loading, setLoading] = useState(true);
-    const [open, setOpen] = useState(false);
+    const [open, setOpen] = useState(autoOpen);
     const [editing, setEditing] = useState<FeePlan | null>(null);
     const [items, setItems] = useState<PlanItem[]>([]);
     const [form, setForm] = useState({ name: '', class_id: '', section: '', frequency: 'monthly', due_day_of_month: 5, late_fee_amount: 0, late_fee_grace_days: 3 });
     const [saving, setSaving] = useState(false);
 
-    const load = async () => {
-        setLoading(true);
+    const load = useCallback(async () => {
         const [p, h, c] = await Promise.all([
             supabase.from('fee_plans').select('*').eq('school_id', schoolId).is('deleted_at', null).order('name'),
             supabase.from('fee_structures').select('id,name,amount').eq('school_id', schoolId).is('deleted_at', null).order('name'),
@@ -35,8 +35,8 @@ const FeePlansTab: React.FC<Props> = ({ schoolId, autoOpen = false }) => {
         ]);
         setPlans(p.data ?? []); setHeads(h.data ?? []); setClasses(c.data ?? []);
         setLoading(false);
-    };
-    useEffect(() => { load(); }, [schoolId]);
+    }, [schoolId]);
+    useEffect(() => { const timer = setTimeout(() => void load(), 0); return () => clearTimeout(timer); }, [load]);
 
     const openNew = () => {
         setEditing(null);
@@ -44,7 +44,6 @@ const FeePlansTab: React.FC<Props> = ({ schoolId, autoOpen = false }) => {
         setItems([]);
         setOpen(true);
     };
-    useEffect(() => { if (autoOpen) openNew(); }, [autoOpen]);
 
     const openEdit = async (p: FeePlan) => {
         setEditing(p);

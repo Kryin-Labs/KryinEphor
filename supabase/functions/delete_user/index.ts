@@ -31,7 +31,7 @@ const getCorsHeaders = (req: Request) => {
     const origin = req.headers.get("Origin") ?? "";
     const configured = (Deno.env.get("ALLOWED_ORIGINS") ?? Deno.env.get("ALLOWED_ORIGIN") ?? "")
         .split(",").map(v => v.trim()).filter(Boolean);
-    const allowedOrigins = new Set(["https://kryinedu.lovable.app", ...configured]);
+    const allowedOrigins = new Set(["https://kryinedu.lovable.app", "https://kryin-ephor.vercel.app", ...configured]);
     const allowOrigin = allowedOrigins.has(origin) || /^https:\/\/[a-z0-9-]+\.(lovable\.app|lovableproject\.com|sandbox\.lovable\.dev)$/i.test(origin)
         ? origin
         : "https://kryinedu.lovable.app";

@@ -1,14 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-export const gradientMap: Record<string, string> = {
-    teal: 'from-teal-500 to-emerald-600',
-    amber: 'from-amber-500 to-orange-500',
-    violet: 'from-indigo-500 to-violet-600',
-    rose: 'from-rose-500 to-pink-600',
-    sky: 'from-sky-500 to-cyan-600',
-};
-
 export const Chip: React.FC<{ children: React.ReactNode; tone?: 'teal' | 'stone' | 'amber' | 'rose' | 'sky' }> = ({ children, tone = 'stone' }) => {
     const map = {
         teal: 'bg-teal-50 text-primary ring-teal-100',

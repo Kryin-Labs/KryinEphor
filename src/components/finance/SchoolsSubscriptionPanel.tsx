@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Building2, Calendar, MoreVertical, CheckCircle2, Clock, Lock, Archive, PlayCircle, Loader2 } from 'lucide-react';
@@ -135,8 +135,7 @@ const SchoolsSubscriptionPanel: React.FC = () => {
     const [menuOpen, setMenuOpen] = useState<string | null>(null);
     const [modal, setModal] = useState<{ kind: MenuKind; school: Row } | null>(null);
 
-    const load = async () => {
-        setLoading(true);
+    const load = useCallback(async () => {
         const { data, error } = await supabase
             .from('v_school_subscription_summary')
             .select('*')
@@ -144,8 +143,8 @@ const SchoolsSubscriptionPanel: React.FC = () => {
         if (error) toast.error(error.message);
         setRows((data || []) as Row[]);
         setLoading(false);
-    };
-    useEffect(() => { load(); }, []);
+    }, []);
+    useEffect(() => { const timer = setTimeout(() => void load(), 0); return () => clearTimeout(timer); }, [load]);
 
     const runBilling = async () => {
         setRunning(true);

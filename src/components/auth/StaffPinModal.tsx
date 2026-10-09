@@ -9,8 +9,7 @@ interface StaffPinModalProps {
     initialMode?: 'unlock' | 'setup';
 }
 
-export const StaffPinModal: React.FC<StaffPinModalProps> = ({
-    isOpen,
+const StaffPinContent: React.FC<Omit<StaffPinModalProps, 'isOpen'>> = ({
     onClose,
     onSuccess,
     initialMode = 'unlock'
@@ -28,23 +27,15 @@ export const StaffPinModal: React.FC<StaffPinModalProps> = ({
     const [newPin, setNewPin] = useState('');
     const [confirmPin, setConfirmPin] = useState('');
     const [error, setError] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(null);
     const [isLocked, setIsLocked] = useState(false);
     const [lockedUntil, setLockedUntil] = useState<string | null>(null);
 
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // Sync mode with initialMode and check status when modal opens
+    // This component mounts fresh each time the modal opens.
     useEffect(() => {
-        if (isOpen) {
-            setPin('');
-            setCurrentPin('');
-            setNewPin('');
-            setConfirmPin('');
-            setError(null);
-            setLoading(true);
-
             checkStaffPinStatus().then(status => {
                 setLoading(false);
                 if (status) {
@@ -59,13 +50,11 @@ export const StaffPinModal: React.FC<StaffPinModalProps> = ({
                 }
             }).catch(() => setLoading(false));
 
-            setTimeout(() => {
+            const focus = setTimeout(() => {
                 inputRef.current?.focus();
             }, 100);
-        }
-    }, [isOpen, initialMode, checkStaffPinStatus]);
-
-    if (!isOpen) return null;
+            return () => clearTimeout(focus);
+    }, [initialMode, checkStaffPinStatus]);
 
     const handlePinInput = (val: string) => {
         const cleaned = val.replace(/\D/g, '').slice(0, 8);
@@ -391,3 +380,6 @@ export const StaffPinModal: React.FC<StaffPinModalProps> = ({
         </div>
     );
 };
+
+export const StaffPinModal: React.FC<StaffPinModalProps> = ({ isOpen, ...props }) =>
+    isOpen ? <StaffPinContent {...props} /> : null;
