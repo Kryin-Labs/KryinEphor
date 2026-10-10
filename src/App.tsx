@@ -6,6 +6,7 @@ import AppErrorBoundary from './components/AppErrorBoundary';
 import NotFound from './pages/NotFound';
 import LandingPage from './pages/LandingPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import MaintenanceGate from './components/auth/MaintenanceGate';
 import PageTransition from './components/ui/PageTransition';
 import RGBToast from './components/ui/RGBToast';
 import GlobalLoader from './components/ui/GlobalLoader';
@@ -119,12 +120,12 @@ function AppContent() {
             </ProtectedRoute>
           } />
           <Route path="/settings" element={
-            <ProtectedRoute allowedRoles={['superadmin', 'admin']}>
+            <ProtectedRoute allowedRoles={['superadmin']}>
               <PageTransition><GlobalSetup /></PageTransition>
             </ProtectedRoute>
           } />
           <Route path="/global-setup" element={
-            <ProtectedRoute allowedRoles={['superadmin', 'admin']}>
+            <ProtectedRoute allowedRoles={['superadmin']}>
               <PageTransition><GlobalSetup /></PageTransition>
             </ProtectedRoute>
           } />
@@ -167,7 +168,7 @@ function App() {
     <AppErrorBoundary>
       <AuthProvider>
         <Router>
-          <AppContent />
+          <MaintenanceGate><AppContent /></MaintenanceGate>
         </Router>
       </AuthProvider>
     </AppErrorBoundary>

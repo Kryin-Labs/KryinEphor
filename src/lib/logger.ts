@@ -16,32 +16,17 @@ interface LogEntry {
 
 /**
  * Centralized logger for Kryin School.
- * Logs to both console and the system_logs table in Supabase.
+ * Logs to console and the authenticated activity RPC in Supabase.
  */
 class Logger {
-    private cachedIp: string | null = null;
-    /**
-     * Returns a placeholder IP. Actual client IP should be captured
-     * server-side (edge functions, middleware) — never via third-party
-     * API calls on the client, which block writes and leak PII.
-     */
-    private getIp(): string {
-        return this.cachedIp || 'client';
-    }
-
     private async writeToDb(entry: LogEntry): Promise<void> {
         try {
-            const ip = entry.ip_address || this.getIp();
-            await supabase.from('system_logs').insert({
-                level: entry.level,
-                category: entry.category,
-                message: entry.message,
-                action: entry.action || 'system_event',
-                status: entry.status || 'success',
-                ip_address: ip,
-                details: entry.details || {},
-                user_id: entry.userId || null,
+            const { error } = await supabase.rpc('fn_record_client_event', {
+                p_level: entry.level, p_category: entry.category, p_message: entry.message,
+                p_action: entry.action || 'system_event', p_status: entry.status || 'success',
+                p_details: entry.details || {},
             });
+            if (error) throw error;
         } catch (dbError) {
             // ─────────────────────────────────────────────────────────────
             // 📝 Author: Narco / Arth
@@ -65,8 +50,8 @@ class Logger {
     ): Promise<void> {
         const entry: LogEntry = { level: 'info', category, message, ...options };
         console.log(this.formatConsole(entry), options.details || '');
-        // Info-level logs stay client-side to avoid a DB insert per event
-        // (the top slow-query offender). Warn/error still persist.
+        // Persist explicit lifecycle events, avoiding an insert for every debug message.
+        if (options.action) await this.writeToDb(entry);
     }
 
     async warn(

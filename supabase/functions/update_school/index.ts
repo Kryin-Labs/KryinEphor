@@ -10,6 +10,8 @@
 // ════════════════════════════════════════════════════════════════════
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
+import { maintenanceBlock } from "../_shared/platformMaintenance.ts";
+import { verifiedActorHeaders } from "../_shared/actorContext.ts";
 
 const getCorsHeaders = (req: Request) => {
     const origin = req.headers.get('Origin') ?? '';
@@ -63,8 +65,11 @@ Deno.serve(async (req: Request) => {
         const { data: { user: caller }, error: callerErr } = await callerClient.auth.getUser();
         if (callerErr || !caller) return json({ error: 'Invalid or expired token' }, 401);
 
+        const unavailable = await maintenanceBlock(callerClient, corsHeaders);
+        if (unavailable) return unavailable;
         const admin = createClient(supabaseUrl, serviceRoleKey, {
             auth: { autoRefreshToken: false, persistSession: false },
+            global: { headers: verifiedActorHeaders(req, caller.id) },
         });
 
         const { data: callerProfile } = await admin

@@ -35,7 +35,7 @@ async function handle(request: Request) {
         p_action: body.id, p_approve: body.approve,
     });
     if (claimError || !claimed) {
-        const db = service();
+        const db = service(identity.user.id);
         const { data: denied } = await db.from('mcp_action_requests').select('school_id,action')
             .eq('id', body.id).eq('actor_id', identity.user.id).maybeSingle();
         if (denied) {
@@ -134,7 +134,7 @@ async function handle(request: Request) {
             result = null;
         }
     }
-    const db = service();
+    const db = service(identity.user.id);
     const { error: updateError } = await db.from('mcp_action_requests').update({
         status, result, error_text: errorText, executed_at: new Date().toISOString(),
     }).eq('id', action.id).eq('status', body.approve ? 'running' : 'denied');

@@ -1,6 +1,26 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
-import { addDays, shiftAnchor, timetableRange, weekday } from '../src/lib/timetable.ts';
+import { after, test } from 'node:test';
+import { randomUUID } from 'node:crypto';
+import { writeFile, unlink } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { build } from 'esbuild';
+
+const generated = resolve('tests', `.timetable-range-${randomUUID()}.mjs`);
+const output = await build({
+    entryPoints: [resolve('src/lib/timetable.ts')],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    write: false,
+    logLevel: 'silent',
+});
+await writeFile(generated, output.outputFiles[0].text, 'utf8');
+const { addDays, shiftAnchor, timetableRange, weekday } = await import(pathToFileURL(generated).href);
+
+after(async () => {
+    await unlink(generated).catch(() => {});
+});
 
 test('timetable ranges stay on calendar dates across months and daylight saving', () => {
     assert.deepEqual(timetableRange('Week', '2026-09-29', ''), { from: '2026-09-28', to: '2026-10-04' });

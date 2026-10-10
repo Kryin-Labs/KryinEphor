@@ -1,6 +1,4 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
+# Dependencies
 /node_modules
 /.npm-cache
 /.pnp
@@ -11,79 +9,67 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-
-# next.js
+# Generated output and test artifacts
+/dist/
+/build/
+/coverage/
+/.lighthouseci/
+/tests/.*.mjs
+*.tsbuildinfo
 /.next/
 /out/
+next-env.d.ts
 
-# production
-/dist/
+# Local credentials and private files; keep the template tracked
+.env
+.env.*
+!.env.example
+/PRIVATE/
+/private/
+*.pem
 *.apk
 *.aab
 *.jks
 *.keystore
-
-# misc
 .DS_Store
-*.pem
 *.zip
 
-# debug
+# Debug output
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+build-error*.txt
 
-# env files (can opt-in for committing if needed)
-.env
-.env.local
-.env.*.local
-
-# vercel
-.vercel
+# Local editor, agent and provider state
+/.vercel/
 /.kilo/
 /.codex/
-/PRIVATE/
+/.agents/
+/.claude/
+/.impeccable/
+/.lovable/
+/skills-lock.json
 /supabase/.temp/
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# Custom user ignores
-.agents/
-.claude/
-.impeccable/
-.lovable/
-.git/
-.github/
-docs/
-!docs/IDENTITY_AND_ACCESS_ARCHITECTURE.md
-images/
-phase4a-migrations-review/
-private/
-scripts/
-supabase/*
-!supabase/migrations/
-!supabase/functions/
-!tests/
-videos/
-build-errors.txt
-build-error.txt
-lighthouserc.json
-policies.json
-PRODUCT.md
-product.md
-README.md
-readme.md
-report-final.md
-task.md
+# Local backups, video projects, audit exports and completed plans
+/images/
+/videos/
+/phase4a-migrations-review/
 /TheNewBackupV022/
-scratch/
-geminilog.md
-brag-output/
-brag-output-2026-10-02-dark/
-build/
-NEWAUDIT.md
+/scratch/
+/brag-output*/
+/policies.json
+/PRODUCT.md
+/IDENTITY_ACCESS_IMPLEMENTATION_CHECKLIST.md
+/report-final.md
+/task.md
+/NEWAUDIT.md
+/geminilog.md
+/docs/superpowers/
+/docs/finance/
+
+# Unused development assets; production landing assets remain tracked
+/public/landing/static/js/bundle.dev.js
+/src/assets/react.svg
 

@@ -1,5 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
+import { maintenanceBlock } from "../_shared/platformMaintenance.ts";
+import { verifiedActorHeaders } from "../_shared/actorContext.ts";
 
 const getCorsHeaders = (req: Request) => {
     const origin = req.headers.get('Origin') ?? '';
@@ -67,10 +69,12 @@ Deno.serve(async (req: Request) => {
         }
 
         // Create admin client with service role
+        const unavailable = await maintenanceBlock(callerClient, corsHeaders);
+        if (unavailable) return unavailable;
         const supabaseAdmin = createClient(
             supabaseUrl,
             serviceRoleKey,
-            { auth: { autoRefreshToken: false, persistSession: false } }
+            { auth: { autoRefreshToken: false, persistSession: false }, global: { headers: verifiedActorHeaders(req, caller.id) } }
         );
 
         // Fetch caller profile to check role, active status, and school context

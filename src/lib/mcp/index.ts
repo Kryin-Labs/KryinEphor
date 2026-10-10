@@ -38,7 +38,7 @@ export const makeMcp = (tools: Parameters<typeof defineMcp>[0]['tools']) => defi
     }),
     tools: tools.map(definition => ({ ...definition, handler: async (input, ctx) => {
         const claims = verifyMcpToken(ctx.getToken() ?? '');
-        const db = service();
+        const db = service(claims.sub);
         const { data: grant } = await db.from('mcp_grants').select('school_id')
             .eq('id', claims.grant_id).eq('user_id', claims.sub).eq('client_id', claims.client_id).single();
         const requestedSchool = input && typeof input === 'object' && 'school_id' in input

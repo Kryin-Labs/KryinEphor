@@ -16,6 +16,16 @@ process.env.VITE_SUPABASE_URL = 'https://project.supabase.co';
 process.env.VITE_SUPABASE_PUBLISHABLE_KEY = 'test-public-key';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-key';
 
+if (!globalThis.WebSocket) {
+    globalThis.WebSocket = class MockWebSocket {
+        constructor() {}
+        addEventListener() {}
+        removeEventListener() {}
+        send() {}
+        close() {}
+    };
+}
+
 const output = await build({
     entryPoints: [resolve(root, 'api/oauth.ts')], bundle: true, platform: 'node', format: 'esm',
     packages: 'external', write: false, logLevel: 'silent',
@@ -89,6 +99,7 @@ test('OAuth enforces exact redirects, PKCE, single-use codes and refresh rotatio
     globalThis.fetch = async (input, init) => {
         const request = input instanceof Request ? input : new Request(input, init);
         const url = new URL(request.url);
+        if (url.pathname === '/rest/v1/rpc/fn_platform_status') return Response.json({ maintenance_enabled: false });
         const rows = tables[url.pathname.split('/').at(-1)];
         assert.ok(rows, `Unexpected request ${url.pathname}`);
         const selected = rows.filter(row => [...url.searchParams].every(([key, filter]) => {
@@ -151,11 +162,13 @@ test('MCP protocol lists only current capabilities and blocks revoked or moved c
     let teacherUnlocked = false;
     let profileSchool = ids.school;
     let platform = false;
+    let maintenance = false;
     const originalFetch = globalThis.fetch;
     globalThis.fetch = async (input, init) => {
         const request = input instanceof Request ? input : new Request(input, init);
         const url = new URL(request.url);
         if (url.pathname === '/api/oauth/jwks') return Response.json(mcpJwks());
+        if (url.pathname === '/rest/v1/rpc/fn_platform_status') return Response.json({ maintenance_enabled: maintenance });
         const table = url.pathname.split('/').at(-1);
         const rows = {
             mcp_grants: revoked ? [] : [{ id: ids.grant, user_id: ids.user, client_id: ids.client, token_version: grantVersion,
@@ -215,6 +228,8 @@ test('MCP protocol lists only current capabilities and blocks revoked or moved c
         assert.equal((await call('tools/list')).status, 401, 'disabled school blocks existing token');
         schoolEnabled = true; profileSchool = randomUUID();
         assert.equal((await call('tools/list')).status, 401, 'school move invalidates old grant');
+        profileSchool = ids.school; maintenance = true;
+        assert.equal((await call('tools/list')).status, 401, 'maintenance blocks school AI access');
         profileSchool = null; platform = true; roles = ['superadmin'];
         listed = (await payload(await call('tools/list'))).result.tools;
         assert.ok(listed.every(tool => tool.name.startsWith('superadmin_')));

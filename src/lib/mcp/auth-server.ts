@@ -15,9 +15,10 @@ export const canonicalJson = (value: unknown) => JSON.stringify(value, (_key, it
         : item) ?? 'null';
 export const randomToken = () => randomBytes(32).toString('base64url');
 
-export const service = () => {
+export const service = (verifiedActorId?: string) => {
     if (!projectUrl || !serviceKey) throw new Error('Supabase server credentials are missing.');
-    return createClient(projectUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    return createClient(projectUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false },
+        ...(verifiedActorId ? { global: { headers: { 'x-kryin-actor-id': verifiedActorId } } } : {}) });
 };
 
 const signingKey = () => {
@@ -80,7 +81,7 @@ export const userClient = (userId: string, sessionId?: string | null) => {
 };
 
 export const verifyGrant = async (claims: McpClaims) => {
-    const db = service();
+    const db = service(claims.sub);
     const { data: grant, error } = await db.from('mcp_grants').select('*')
         .eq('id', claims.grant_id).eq('user_id', claims.sub).eq('client_id', claims.client_id)
         .is('revoked_at', null).maybeSingle();
@@ -88,6 +89,13 @@ export const verifyGrant = async (claims: McpClaims) => {
     const { data: profile } = await db.from('profiles').select('id,school_id,role,is_active,deleted_at')
         .eq('id', claims.sub).maybeSingle();
     if (!profile?.is_active || profile.deleted_at) throw new Error('Account is inactive.');
+    const { data: platform, error: platformError } = await db.rpc('fn_platform_status');
+    if (platformError || typeof platform?.maintenance_enabled !== 'boolean') throw new Error('Platform availability could not be checked.');
+    if (platform?.maintenance_enabled && profile.role !== 'superadmin') {
+        const { data: extraRole } = await db.from('user_roles').select('role')
+            .eq('user_id', profile.id).eq('role', 'superadmin').maybeSingle();
+        if (!extraRole) throw new Error('Platform maintenance is in progress.');
+    }
     if (grant.school_id && profile.school_id !== grant.school_id) throw new Error('School membership changed.');
     if (grant.school_id) {
         const { data: school } = await db.from('schools').select('ai_connections_enabled,deleted_at')

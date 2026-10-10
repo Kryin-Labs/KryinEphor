@@ -1,10 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 import { recordDiagnostic, isDiagnosticsEnabled } from './devDiagnostics';
+import { activityFetch } from './activityTransport';
+import { requestMetricsFetch } from './requestMetrics';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-export const supabase = createClient(supabaseUrl, supabasePublishableKey);
+export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
+  global: { fetch: activityFetch(requestMetricsFetch(fetch.bind(globalThis), supabaseUrl), supabaseUrl) },
+});
 
 // ─── Dev diagnostics instrumentation ────────────────────────────────
 // Wraps supabase.functions.invoke and supabase.auth methods so failures

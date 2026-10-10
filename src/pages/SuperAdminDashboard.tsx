@@ -30,11 +30,9 @@ import {
     CheckCircle2,
     Building2,
     Save,
-    Trash2,
     ChevronDown,
     Terminal,
     Maximize2,
-    RefreshCw
 } from 'lucide-react';
 import Sidebar from '../components/dashboard/Sidebar';
 import AnnouncementPreview from '../components/announcements/AnnouncementPreview';
@@ -42,6 +40,12 @@ import Header from '../components/dashboard/Header';
 import { supabase } from '../lib/supabase';
 import { getFunctionErrorMessage } from '../lib/functionErrors';
 import { formatDistanceToNow } from 'date-fns';
+import { Link } from 'react-router-dom';
+import { fetchSystemActivity, reconcileAlerts } from '../lib/operations';
+import type { ActivityEvent } from '../lib/operations';
+import ActivityDetail from '../components/activity/ActivityDetail';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '../context/AuthContext';
 
 interface Stat {
     label: string;
@@ -65,6 +69,7 @@ interface SchoolNetwork {
 }
 
 interface SystemLog {
+    event: ActivityEvent;
     id: string;
     action: string;
     message: string;
@@ -100,9 +105,13 @@ interface AdminData {
 }
 
 const SuperAdminDashboard: React.FC = () => {
+    const { user } = useAuth();
+    const availability = useQuery({ queryKey: ['platform-status', user?.id ?? 'visitor'], queryFn: async () => {
+        const { data, error } = await supabase.rpc('fn_platform_status'); if (error) throw error; return data;
+    } });
     const [loading, setLoading] = useState(true);
     const [userName, setUserName] = useState('System Core');
-    const [systemHealth, setSystemHealth] = useState<'operational' | 'degraded' | 'down'>('operational');
+    const [systemHealth, setSystemHealth] = useState<'operational' | 'degraded' | 'down' | 'unknown'>('unknown');
     const [healthDetails, setHealthDetails] = useState<{ alerts: { title?: string | null; message?: string | null; created_at: string }[], errors: { action?: string | null; message?: string | null; created_at: string }[] }>({ alerts: [], errors: [] });
     const [showHealthTooltip, setShowHealthTooltip] = useState(false);
 
@@ -119,8 +128,6 @@ const SuperAdminDashboard: React.FC = () => {
     const [selectedLog, setSelectedLog] = useState<SystemLog | null>(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [showLogsPanel, setShowLogsPanel] = useState(false);
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [deletingLogs, setDeletingLogs] = useState(false);
     const [chartData, setChartData] = useState<number[]>(new Array(12).fill(0));
     const [chartLabels, setChartLabels] = useState<string[]>([]);
 
@@ -355,26 +362,24 @@ const SuperAdminDashboard: React.FC = () => {
                 { label: 'Active Features', value: activeFeatures || 0, icon: Flag, color: 'text-cyan-600' },
                 { label: 'Roles', value: totalRoles || 0, icon: Shield, color: 'text-violet-600' },
                 { label: 'Permissions', value: totalPermissions || 0, icon: Activity, color: 'text-rose-600' },
-                { label: 'Unread Alerts', value: unreadNotifs || 0, icon: Bell, color: 'text-red-600' },
+                { label: 'Unread Notifications', value: unreadNotifs || 0, icon: Bell, color: 'text-red-600' },
                 { label: 'Open Inquiries', value: openInquiries || 0, icon: MessageSquare, color: 'text-sky-600' },
             ]);
 
             // ─── 5. System Health Check ───
-            const { data: criticalAlertsData, count: criticalAlertsCount } = await supabase
+            await reconcileAlerts();
+            const { data: criticalAlertsData, count: criticalAlertsCount, error: alertError } = await supabase
                 .from('system_alerts')
                 .select('title, message, created_at', { count: 'exact' })
                 .eq('severity', 'critical')
                 .eq('is_resolved', false)
                 .order('created_at', { ascending: false })
                 .limit(5);
+            if (alertError) throw alertError;
 
-            const { data: errorLogsData, count: errorLogsCount } = await supabase
-                .from('system_logs')
-                .select('action, message, created_at, school_id', { count: 'exact' })
-                .eq('level', 'error')
-                .gte('created_at', new Date(Date.now() - 3600000).toISOString())
-                .order('created_at', { ascending: false })
-                .limit(5);
+            const logsData = await fetchSystemActivity({ limit: 100 });
+            const errorLogsData = logsData.filter(l => l.level === 'error' && new Date(l.created_at).getTime() >= Date.now() - 3600000);
+            const errorLogsCount = errorLogsData.length;
 
             setHealthDetails({
                 alerts: criticalAlertsData || [],
@@ -388,25 +393,6 @@ const SuperAdminDashboard: React.FC = () => {
             } else {
                 setSystemHealth('operational');
             }
-
-            // Fetch fresh activity logs
-            const { data: logsData } = await supabase
-                .from('system_logs')
-                .select('*, schools!school_id(name)')
-                .order('created_at', { ascending: false })
-                .limit(100); // Get more for expanded view
-
-            // Fetch profiles for logs
-            const userIds = Array.from(new Set((logsData || []).map(l => l.user_id).filter(Boolean)));
-            const { data: profilesData } = await supabase
-                .from('profiles')
-                .select('id, full_name')
-                .in('id', userIds.length > 0 ? userIds : ['00000000-0000-0000-0000-000000000000']);
-
-            const profileMap = (profilesData || []).reduce((acc: Record<string, string | null>, p) => {
-                acc[p.id] = p.full_name;
-                return acc;
-            }, {});
 
             const iconMap: Record<string, React.ElementType> = {
                 'auth': ShieldAlert,
@@ -425,19 +411,20 @@ const SuperAdminDashboard: React.FC = () => {
             };
 
             const transformedLogs: SystemLog[] = (logsData || []).map(l => ({
+                event: l,
                 id: l.id,
                 action: l.action || 'System Event',
                 message: l.message,
-                time: formatDistanceToNow(new Date(l.created_at)) + ' ago',
+                time: formatDistanceToNow(new Date(l.created_at), { addSuffix: true }),
                 raw_time: new Date(l.created_at).toLocaleString(),
-                type: (l.status === 'failed' || l.status === 'error') ? 'danger' : (typeMap[l.category] || 'info'),
+                type: (l.level === 'error' || ['failed', 'error'].includes(l.status)) ? 'danger' : (l.level === 'warn' || ['denied', 'blocked'].includes(l.status)) ? 'warning' : (typeMap[l.category] || 'info'),
                 icon: iconMap[l.category] || Database,
                 ip_address: l.ip_address || '—',
                 status: l.status || 'success',
                 details: l.details || {},
                 school_id: l.school_id,
-                school_name: l.schools?.name || 'Platform Core',
-                user_name: (l.user_id ? profileMap[l.user_id] : null) || 'System',
+                school_name: l.school_name || 'Platform Core',
+                user_name: l.user_name,
                 user_agent: l.user_agent || '—',
                 level: l.level || 'info',
                 category: l.category || 'system'
@@ -447,6 +434,7 @@ const SuperAdminDashboard: React.FC = () => {
             setLogs(transformedLogs.slice(0, 12));
 
         } catch (err) {
+            setSystemHealth('unknown');
             console.error("Dashboard Load Error:", err);
         } finally {
             setLoading(false);
@@ -456,21 +444,6 @@ const SuperAdminDashboard: React.FC = () => {
     useEffect(() => {
         fetchDashboardData();
     }, []);
-
-    const handleDeleteAllLogs = async () => {
-        try {
-            setDeletingLogs(true);
-            const { error } = await supabase.from('system_logs').delete().not('id', 'is', null);
-            if (error) throw error;
-            setAllLogs([]);
-            setLogs([]);
-            setShowDeleteConfirm(false);
-        } catch (err) {
-            console.error("Error deleting logs:", err);
-        } finally {
-            setDeletingLogs(false);
-        }
-    };
 
     const fetchAllAdmins = async () => {
         setAdminsLoading(true);
@@ -583,12 +556,14 @@ const SuperAdminDashboard: React.FC = () => {
     };
 
     const healthConfig = {
-        operational: { label: 'All Systems Operational', color: 'bg-emerald-50 text-emerald-700 border-emerald-100', dot: 'bg-emerald-500', ping: 'bg-emerald-400' },
-        degraded: { label: 'Degraded Performance', color: 'bg-amber-50 text-amber-700 border-amber-100', dot: 'bg-amber-500', ping: 'bg-amber-400' },
+        operational: { label: 'No Recent Critical Alerts', color: 'bg-emerald-50 text-emerald-700 border-emerald-100', dot: 'bg-emerald-500', ping: 'bg-emerald-400' },
+        degraded: { label: 'Recent Errors Reported', color: 'bg-amber-50 text-amber-700 border-amber-100', dot: 'bg-amber-500', ping: 'bg-amber-400' },
         down: { label: 'Critical Issues Detected', color: 'bg-red-50 text-red-700 border-red-100', dot: 'bg-red-500', ping: 'bg-red-400' },
+        maintenance: { label: 'Maintenance Enabled', color: 'bg-amber-50 text-amber-700 border-amber-100', dot: 'bg-amber-500', ping: 'bg-amber-400' },
+        unknown: { label: 'Alert Status Unavailable', color: 'bg-stone-50 text-stone-700 border-stone-200', dot: 'bg-stone-400', ping: 'bg-stone-400' },
     };
-
-    const health = healthConfig[systemHealth];
+    const healthState = availability.data?.maintenance_enabled ? 'maintenance' : availability.error ? 'unknown' : systemHealth;
+    const health = healthConfig[healthState];
 
     return (
         // ─────────────────────────────────────────────────────────────
@@ -642,21 +617,21 @@ const SuperAdminDashboard: React.FC = () => {
                                             <h4 className="font-bold text-stone-800 mb-3 border-b pb-3 flex items-center justify-between">
                                                 System Health Details
                                                 <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${health.color}`}>
-                                                    {systemHealth}
+                                                    {healthState}
                                                 </span>
                                             </h4>
                                             
-                                            {systemHealth === 'operational' ? (
+                                            {healthState === 'maintenance' ? <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">School and visitor access is paused. Superadmins retain access. Live database and resource checks are available in Global Setup.</p> : healthState === 'operational' ? (
                                                 <div className="flex items-start gap-3 text-sm text-stone-600 bg-emerald-50/50 p-3 rounded-xl">
                                                     <CheckCircle2 className="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" />
-                                                    <p className="leading-relaxed">All core systems, databases, and network modules are running smoothly. No critical issues or offline nodes detected across the platform.</p>
+                                                    <p className="leading-relaxed">No unresolved critical alerts were found at the last dashboard load. Open Global Setup’s health console for current database, school and resource measurements.</p>
                                                 </div>
                                             ) : (
                                                 <div className="space-y-4 max-h-[300px] overflow-y-auto custom-scrollbar pr-1 pointer-events-auto cursor-auto">
                                                     {healthDetails.alerts.length > 0 && (
                                                         <div>
                                                             <h5 className="text-xs font-bold text-red-600 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                                                                <AlertTriangle className="w-3.5 h-3.5" /> Critical / Offline Problems
+                                                                <AlertTriangle className="w-3.5 h-3.5" /> Critical Alerts
                                                             </h5>
                                                             <ul className="text-xs text-stone-700 space-y-2">
                                                                 {healthDetails.alerts.map((alert, i) => (
@@ -691,8 +666,8 @@ const SuperAdminDashboard: React.FC = () => {
                                                 </div>
                                             )}
                                             <div className="mt-4 pt-3 text-[10px] text-stone-400 border-t flex justify-between items-center font-medium uppercase tracking-wider">
-                                                <span className="flex items-center gap-1"><Activity className="w-3 h-3" /> Real-time network</span>
-                                                <span>Live</span>
+                                                <span className="flex items-center gap-1"><Activity className="w-3 h-3" /> Saved status / alert history</span>
+                                                <span>Global Setup: live checks</span>
                                             </div>
                                         </motion.div>
                                     )}
@@ -890,18 +865,10 @@ const SuperAdminDashboard: React.FC = () => {
                         <div className="flex justify-between items-center mb-6">
                             <div>
                                 <h3 className="text-lg font-bold text-foreground">System Activity</h3>
-                                <p className="text-xs text-muted mt-1">Real-time cross-network logs</p>
+                                <p className="text-xs text-muted mt-1">Recent cross-network activity</p>
                             </div>
                             <div className="flex items-center gap-2">
-                                {allLogs.length > 0 && !loading && (
-                                    <button
-                                        onClick={() => setShowDeleteConfirm(true)}
-                                        className="w-8 h-8 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center text-red-500 hover:bg-red-100 hover:text-red-600 transition-all"
-                                        title="Clear All Logs"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                )}
+                                <Link to="/alerts" className="text-xs font-bold text-primary underline">Full history</Link>
                                 <button
                                     onClick={() => setShowLogsPanel(!showLogsPanel)}
                                     className="px-3 py-1.5 rounded-lg bg-gray-50 text-xs font-bold text-stone-600 hover:bg-gray-100 flex items-center gap-2 transition-colors border border-gray-100"
@@ -931,7 +898,7 @@ const SuperAdminDashboard: React.FC = () => {
                                         {logs.map((log: SystemLog) => {
                                             const Icon = log.icon;
                                             return (
-                                                <div key={log.id} className="bg-[#FAF9F6] rounded-2xl p-4 border border-white shadow-[inset_2px_2px_4px_#E6E4E0,inset_-2px_-2px_4px_#FFFFFF] flex gap-3 hover:bg-white transition-all duration-200 group/item relative cursor-pointer" onClick={() => { setSelectedLog(log); setShowDetailModal(true); }}>
+                                                <button type="button" aria-label={`View log ${log.action} from ${log.user_name}`} key={log.id} className="w-full text-left bg-[#FAF9F6] rounded-2xl p-4 border border-white shadow-[inset_2px_2px_4px_#E6E4E0,inset_-2px_-2px_4px_#FFFFFF] flex gap-3 hover:bg-white transition-all duration-200 group/item relative cursor-pointer" onClick={() => { setSelectedLog(log); setShowDetailModal(true); }}>
                                                     <div className={`mt-0.5 w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs border-2 border-white shadow-sm
                                                         ${log.type === 'success' || log.status === 'success' ? 'bg-emerald-100 text-emerald-600' :
                                                             log.type === 'warning' ? 'bg-amber-100 text-amber-600' :
@@ -946,7 +913,7 @@ const SuperAdminDashboard: React.FC = () => {
                                                             <Clock className="w-3 h-3" /> {log.time}
                                                         </div>
                                                     </div>
-                                                </div>
+                                                </button>
                                             );
                                         })}
                                     </div>
@@ -971,7 +938,7 @@ const SuperAdminDashboard: React.FC = () => {
                                             const schoolColorClass = log.school_name === 'Platform Core' ? 'bg-stone-100 text-stone-700 border-stone-200' : colors[colorIndex];
 
                                             return (
-                                                <div key={log.id} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm flex items-center gap-4 hover:border-gray-300 transition-colors cursor-pointer" onClick={() => { setSelectedLog(log); setShowDetailModal(true); }}>
+                                                <button type="button" aria-label={`View log ${log.action} from ${log.user_name}`} key={log.id} className="w-full text-left bg-white rounded-xl p-4 border border-gray-100 shadow-sm flex items-center gap-4 hover:border-gray-300 transition-colors cursor-pointer" onClick={() => { setSelectedLog(log); setShowDetailModal(true); }}>
                                                     <div className={`w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center 
                                                         ${log.type === 'success' || log.status === 'success' ? 'bg-emerald-50 text-emerald-600' :
                                                             log.type === 'warning' ? 'bg-amber-50 text-amber-600' :
@@ -1010,7 +977,7 @@ const SuperAdminDashboard: React.FC = () => {
                                                     <div className="pl-4 border-l border-gray-100 flex items-center justify-center text-gray-300">
                                                         <ChevronDown className="w-5 h-5 -rotate-90" />
                                                     </div>
-                                                </div>
+                                                </button>
                                             );
                                         })}
                                     </div>
@@ -1025,93 +992,7 @@ const SuperAdminDashboard: React.FC = () => {
                     © {new Date().getFullYear()} Kryin School. Super Admin Access Level 1.
                 </div>
 
-                {/* Detail Modal */}
-                {showDetailModal && selectedLog && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-                        <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="clay-card w-full max-w-lg p-0 overflow-hidden"
-                        >
-                            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${selectedLog.status === 'failed' ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-500'}`}>
-                                        <selectedLog.icon className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-bold text-foreground">{selectedLog.action}</h3>
-                                        <p className="text-xs text-muted">ID: {selectedLog.id.slice(0, 8)}...</p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => setShowDetailModal(false)}
-                                    className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 transition-colors"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-
-                            <div className="p-6 space-y-6">
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Status</label>
-                                            <div className={`text-sm font-bold uppercase ${selectedLog.status === 'failed' ? 'text-red-500' : 'text-emerald-500'}`}>
-                                                {selectedLog.status}
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Status</label>
-                                                <div className={`text-sm font-bold uppercase ${selectedLog.status === 'failed' ? 'text-red-500' : 'text-emerald-500'}`}>
-                                                    {selectedLog.status}
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Time</label>
-                                                <div className="text-sm font-medium text-foreground">{selectedLog.raw_time}</div>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Target Domain</label>
-                                                <div className="text-sm font-medium text-foreground flex items-center gap-2">
-                                                    <Building2 className="w-4 h-4 text-primary" /> {selectedLog.school_name}
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Actor</label>
-                                                <div className="text-sm font-medium text-foreground flex items-center gap-2">
-                                                    <UserCheck className="w-4 h-4 text-primary" /> {selectedLog.user_name}
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-bold text-muted uppercase tracking-wider">IP Address</label>
-                                                <div className="text-sm font-mono font-medium text-stone-600 bg-stone-50 px-2 py-1 rounded inline-block">
-                                                    {selectedLog.ip_address}
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-bold text-muted uppercase tracking-wider">User Agent</label>
-                                                <div className="text-xs font-mono text-stone-500 truncate" title={selectedLog.user_agent}>
-                                                    {selectedLog.user_agent}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="p-6 pt-0 flex justify-end">
-                                <button
-                                    onClick={() => setShowDetailModal(false)}
-                                    className="clay-btn py-2 px-6 text-sm font-bold"
-                                >
-                                    Close
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
+                {showDetailModal && selectedLog && <ActivityDetail event={selectedLog.event} onClose={() => setShowDetailModal(false)} />}
 
                 {/* ═══ ALL ADMINS MODAL ═══ */}
                 {showAdminsModal && (
@@ -1302,43 +1183,6 @@ const SuperAdminDashboard: React.FC = () => {
                     </div>
                 )}
 
-                {/* ═══ DELETE ALL LOGS CONFIRMATION MODAL ═══ */}
-                {showDeleteConfirm && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-                        <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="bg-white rounded-[24px] shadow-2xl relative w-full max-w-md overflow-hidden"
-                        >
-                            <div className="p-6 text-center">
-                                <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-sm">
-                                    <AlertTriangle className="w-8 h-8 text-red-500" />
-                                </div>
-                                <h3 className="text-xl font-bold text-foreground mb-2">Clear All System Logs?</h3>
-                                <p className="text-sm text-muted mb-6">
-                                    This action cannot be undone. All activity logs across all schools and the core platform will be permanently deleted.
-                                </p>
-                                <div className="flex gap-3 w-full">
-                                    <button
-                                        onClick={() => setShowDeleteConfirm(false)}
-                                        disabled={deletingLogs}
-                                        className="flex-1 px-4 py-3 rounded-xl font-bold text-stone-600 bg-gray-50 hover:bg-gray-100 transition-colors disabled:opacity-50"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleDeleteAllLogs}
-                                        disabled={deletingLogs}
-                                        className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20 hover:shadow-red-500/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                                    >
-                                        {deletingLogs ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                                        {deletingLogs ? 'Clearing...' : 'Yes, Clear All'}
-                                    </button>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
             </main>
         </div>
     );

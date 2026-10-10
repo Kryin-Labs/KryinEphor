@@ -24,7 +24,7 @@ export default function AIConnections() {
     const isTeacher = roles.includes('teacher');
     const isSuperadmin = roles.includes('superadmin');
     const connectionQuery = useQuery({
-        queryKey: ['ai-connections', user?.id, schoolId], enabled: !!user,
+        queryKey: ['ai-connections', user?.id, schoolId], enabled: !!user, refetchInterval: 30_000,
         queryFn: async () => {
             const [grants, history, school, callHistory] = await Promise.all([
                 supabase.rpc('mcp_my_connections'), supabase.rpc('mcp_my_actions'),
@@ -91,7 +91,12 @@ export default function AIConnections() {
                         <div><h1 className="text-2xl font-extrabold">AI Connections</h1>
                             <p className="text-sm text-muted">Connect an MCP client to your permitted KryinEphor tools.</p></div></div>
                     {message && <p role="status" className="rounded-xl bg-teal-50 p-3 text-sm text-teal-900">{message}</p>}
-                    {connectionQuery.error && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">Could not load AI connections: {connectionQuery.error.message}</p>}
+                    {connectionQuery.error && <div role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">
+                        {('code' in connectionQuery.error && connectionQuery.error.code === 'PGRST202')
+                            ? 'AI connections are unavailable because the database connection functions are missing. Apply the MCP connections migration and refresh the schema cache.'
+                            : `Could not load AI connections: ${connectionQuery.error.message}`}
+                        <button type="button" onClick={() => void connectionQuery.refetch()} disabled={connectionQuery.isFetching} className="ml-3 underline">Retry</button>
+                    </div>}
                     {!connectionQuery.error && !ready && <p role="status" className="text-sm text-muted">Loading AI connections…</p>}
                     {!eligible && <p className="text-sm text-muted">AI connections are available to school admins, teachers, superadmins, and combined student/parent accounts.</p>}
                     {isAdmin && schoolId && <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4">

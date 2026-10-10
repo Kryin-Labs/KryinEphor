@@ -482,17 +482,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         setIsTransitioning(true);
 
-        // Fire-and-forget logs so we don't block the redirect on network I/O.
-        void logger.info('auth', 'Logout initiated', {
+        // Save the request while the caller still has an authenticated session.
+        await logger.info('auth', 'Logout requested', {
             action: 'logout',
             status: 'pending',
             details: { email: currentEmail },
             userId: currentUserId,
         });
 
-        // Local scope = clear tokens client-side without waiting for the
-        // Supabase server round-trip (which was adding ~5–7s to sign-out).
-        // Global session revocation happens lazily on next server contact.
+        // Revoke global authentication sessions before redirecting.
         try {
             // Phase 17: Revoke server staff unlock session on logout
             try { await unsubscribeFromAnnouncementPush(); } catch { /* best effort */ }
@@ -516,11 +514,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await signOutBeforeRedirect(
                 () => supabase.auth.signOut({ scope: 'global' }),
                 () => {
-                    void logger.info('auth', 'Logout successful', {
-                        action: 'logout',
-                        status: 'success',
-                        details: { email: currentEmail },
-                    });
                     setUser(null);
                     setRole(null);
                     setRoles([]);
